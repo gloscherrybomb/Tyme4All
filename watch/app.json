@@ -9,9 +9,7 @@
     "vender": "James Eastwood",
     "description": "Tymewear VitalPro breathing data during a run"
   },
-  "permissions": [
-    { "code": "data:user.hd.heart_rate" }
-  ],
+  "permissions": ["data:user.hd.heart_rate"],
   "runtime": {
     "apiVersion": { "minVersion": "3.6", "target": "4.3", "compatible": "3.6" }
   },
