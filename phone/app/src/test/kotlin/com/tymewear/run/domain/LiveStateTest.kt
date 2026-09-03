@@ -55,6 +55,20 @@ class LiveStateTest {
     }
 
     @Test
+    fun `battery reflects the link and survives staleness but not disconnect`() {
+        val ls = LiveState(stalenessMs = 10_000)
+        ls.onConnected()
+        ls.onBattery(77)
+        ls.onBreath(breath(20.0, 2.0, 1), nowMs = 0)
+        val stale = ls.payload(s, 10_001)
+        assertEquals("stale", stale.status)
+        assertNull(stale.ve)
+        assertEquals(77, stale.batteryPct)
+        ls.onDisconnected()
+        assertNull(ls.payload(s, 10_002).batteryPct)
+    }
+
+    @Test
     fun `payload carries thresholds reserve session and battery and serialises`() {
         val ls = LiveState()
         ls.onConnected(); ls.onBattery(77); ls.setSessionId("20260903-071000")

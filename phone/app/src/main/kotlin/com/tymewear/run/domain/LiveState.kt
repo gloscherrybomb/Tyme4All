@@ -59,6 +59,8 @@ class LiveState(stalenessMs: Long = Constants.BLE_DATA_STALENESS_TIMEOUT_MS) {
         LivePayload(
             ve = ve, br = br, tv = tv, ie = if (live) ie else null,
             zone = if (ve != null) ZoneClassifier.zoneFor(ve, settings.thresholds) else 0,
+            // Battery reflects the BLE link, not the breath stream: kept while the
+            // link is connected (including when status is "stale"), cleared on disconnect.
             batteryPct = if (connected) battery else null,
             status = st.wire, sessionId = sessionId,
             thresholds = settings.thresholds.let { ThresholdsDto(it.vt1, it.vt2, it.topZ4, it.vo2max) },
