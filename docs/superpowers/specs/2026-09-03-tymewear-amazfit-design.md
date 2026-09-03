@@ -35,7 +35,7 @@ Three cooperating parts. The phone is the hub.
 
 ```
  VitalPro strap ──BLE──▶ Phone app (Android, Kotlin)
-                            │  ├─ records breathing session (FIT + raw log)
+                            │  ├─ records breathing session (raw per-breath log)
                             │  ├─ loopback HTTP relay  (127.0.0.1:41415)
                             │  └─ Intervals.icu client (poll, fetch streams, push streams)
                             │
@@ -54,7 +54,7 @@ Kotlin, minSdk 26, targetSdk 34, matching the Karoo app. Ported from `TymewearKa
 
 | Ported as-is or lightly adapted | Left behind |
 |---|---|
-| `Protocol.kt` (UUIDs, packet parser, FIT field definitions) | Everything depending on `karoo-ext` (data types, `TymewearExtension`, Glance views) |
+| `Protocol.kt` (UUIDs, packet parser; FIT field definitions dropped) | Everything depending on `karoo-ext` (data types, `TymewearExtension`, Glance views) |
 | `BleManager.kt`, `BleStatus.kt`, `ScanThrottle.kt`, `BleDiagnostics.kt` | Beta ventilatory state: `VeBaseline`, `SessionScale`, `LoadGate`, `ThresholdEvidence`, `SessionPipeline`, `RideEndPrompt` |
 | `DataWatchdog.kt`, `DataFreshness.kt` | Power and heart-rate inputs, mobilization index |
 | `ZoneClassifier.kt`, `Constants.kt` (thresholds, zone colours) | VE graph, time-in-zone chart, smoothing receivers |
@@ -108,15 +108,9 @@ Whether `onInit` and `onDestroy` fire reliably at run start and end is documente
 
 ### 5.2 What is recorded
 
-Per session, two files under app storage, named by start time:
+Per session, one file under app storage, named by start time: a **raw log** (`<start>.jsonl`) with every parsed breath packet: wall-clock timestamp, `tvRaw`, inhale and exhale durations, packet timestamp and battery, plus session start and stop markers. This is the source of truth. No FIT file is written on the phone; there is nowhere it needs to go.
 
-1. **Raw log** (`<start>.jsonl`): every parsed breath packet with wall-clock timestamp, `tvRaw`, inhale and exhale durations, packet timestamp and battery. Source of truth; allows re-merging if thresholds change or Intervals.icu sync fails.
-2. **FIT file** (`<start>.fit`): activity FIT with one record per second carrying the same developer fields the Karoo app writes, using the same developer application ID, so files stay compatible with the Tymewear dashboard and existing tooling:
-   - `tyme_breath_rate` (brpm), `tyme_tidal_volume` (vol/br), `tyme_minute_volume` (vol/min), `tyme_inhale_exhale_ratio` (sec/sec), `tyme_ve_zone`
-   - Session message with time in each of the five zones.
-   - No `tyme_mobilization_index` or `tyme_percent_brr` (they need heart rate, which the phone does not have).
-
-Per-second values are produced exactly as on the Karoo: each breath packet updates the rolling buffers (`RollingBuffer`, capacity 8) and the per-second record carries the current smoothed values. Zone per second comes from `ZoneClassifier.zoneFor(ve, thresholds)` with the configured thresholds.
+The **per-second series** (VE, BR, TV, I:E ratio, zone) is derived from the raw log when it is needed, at sync time. Derivation matches the Karoo app so numbers agree across devices: each breath packet updates the rolling buffers (`RollingBuffer`, capacity 8) and each second carries the current smoothed values; the zone comes from `ZoneClassifier.zoneFor(ve, thresholds)` with the thresholds configured at that moment. Because the series is derived, changing thresholds and re-syncing recomputes the zone stream with no data loss.
 
 Sessions are kept for 90 days, then pruned.
 
@@ -138,7 +132,7 @@ Zero touch. The phone waits for the watch's run to appear and attaches the breat
    | `tyme_inhale_exhale_ratio` | ratio | I:E ratio |
    | `tyme_ve_zone` | zone | VE zone |
 
-   Using the same codes as the FIT developer fields means Karoo rides (which carry these as record fields) and Amazfit runs share the same streams in Intervals.icu charts and custom fields.
+   The codes match the developer field names Tymewear uses in FIT files, so if any other Tymewear-recorded activity lands in Intervals.icu with those record fields, it shares the same streams and charts. That is a convenience, not a requirement.
 
 4. Zepp app linked to Intervals.icu (Zepp app: Profile, third-party account linking).
 
@@ -161,7 +155,7 @@ Zero touch. The phone waits for the watch's run to appear and attaches the breat
 
 - No upload of the phone's FIT to Intervals.icu (would create a duplicate activity).
 - No deletion of anything in Intervals.icu.
-- No Tymewear dashboard upload (no public API). The phone's FIT files are shareable from the session list for a manual upload if wanted.
+- No Tymewear dashboard upload (no public API), and no FIT file on the phone at all. Intervals.icu is the single destination.
 - No session-level custom activity fields in the first version. Time-in-zone can be derived in Intervals.icu from the `tyme_ve_zone` stream with a custom field script if wanted.
 
 ## 7. Settings (phone app)
@@ -203,7 +197,7 @@ The extension holds no thresholds or state of its own beyond the last received p
 
 **Phone app (JVM unit tests, TDD):**
 - Parser and zone tests carried over from the Karoo app.
-- FIT writer: generated file decodes and its developer fields match the Karoo output for the same input (fixtures: existing ride CSVs in `TymewearKaroo/app/src/test/resources/fixtures`, `docs/*.fit`).
+- Per-second derivation: from a raw log, the derived VE, BR, TV and zone series match the Karoo app's recorded values for the same packets (fixtures: existing ride CSVs in `TymewearKaroo/app/src/test/resources/fixtures`).
 - Alignment: given an Intervals.icu `time` stream and a session series, produces the right `data` arrays, including nulls in gaps, offsets and skew rejection.
 - Intervals.icu client against recorded responses from the live API (captured once with the runner's key, secrets stripped).
 - Session state machine: start, stop, fallback stop, restart recovery.
@@ -239,7 +233,7 @@ If item 3 fails, start and stop move to the extension's `onResume` (first visibi
 
 ## 13. Out of scope for the first version
 
-Beta ventilatory state, VE graph, time-in-zone chart, mobilization index, power or heart-rate inputs, Tymewear dashboard upload, session-level custom fields in Intervals.icu, iOS, other Zepp OS watches (though nothing prevents them).
+Beta ventilatory state, VE graph, time-in-zone chart, mobilization index, power or heart-rate inputs, FIT file output of any kind, Tymewear dashboard upload, session-level custom fields in Intervals.icu, iOS, other Zepp OS watches (though nothing prevents them).
 
 ## 14. Repository layout
 
