@@ -2,8 +2,10 @@ package com.tymewear.run.domain.sync
 
 import java.time.Instant
 import java.time.LocalDateTime
+import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
@@ -26,10 +28,11 @@ import okhttp3.RequestBody.Companion.toRequestBody
 
 class IntervalsClient(
     apiKey: String,
-    private val baseUrl: String = "https://intervals.icu",
+    baseUrl: String = "https://intervals.icu",
     private val client: OkHttpClient = OkHttpClient(),
 ) : IntervalsApi {
 
+    private val baseUrl = baseUrl.removeSuffix("/")
     private val auth = Credentials.basic("API_KEY", apiKey)
     private val json = Json { ignoreUnknownKeys = true }
     private val fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss").withZone(ZoneOffset.UTC)
@@ -39,8 +42,8 @@ class IntervalsClient(
         return json.parseToJsonElement(body).jsonArray.map { e ->
             val o = e.jsonObject
             ActivitySummary(
-                id = o.str("id")!!,
-                startDate = parseInstant(o.str("start_date")!!),
+                id = o.req("id", "activities"),
+                startDate = parseInstant(o.req("start_date", "activities")),
                 name = o.str("name"),
                 type = o.str("type"),
                 source = o.str("source"),
@@ -54,7 +57,7 @@ class IntervalsClient(
         return json.parseToJsonElement(body).jsonArray.map { e ->
             val o = e.jsonObject
             Stream(
-                type = o.str("type")!!,
+                type = o.req("type", "streams"),
                 data = (o["data"] as? JsonArray)?.map { v -> (v as? JsonPrimitive)?.doubleOrNull } ?: emptyList(),
                 custom = (o["custom"] as? JsonPrimitive)?.booleanOrNull ?: false,
             )
@@ -104,7 +107,13 @@ class IntervalsClient(
 
     private fun JsonObject.str(k: String): String? = (this[k] as? JsonPrimitive)?.contentOrNull
 
+    private fun JsonObject.req(k: String, endpoint: String): String =
+        str(k) ?: throw IntervalsException(200, "missing field $k in $endpoint")
+
     private fun parseInstant(s: String): Instant =
-        if (s.endsWith("Z") || s.contains("+")) Instant.parse(s)
-        else LocalDateTime.parse(s).toInstant(ZoneOffset.UTC)
+        try {
+            OffsetDateTime.parse(s).toInstant()
+        } catch (e: DateTimeParseException) {
+            LocalDateTime.parse(s).toInstant(ZoneOffset.UTC)
+        }
 }

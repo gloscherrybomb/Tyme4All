@@ -36,6 +36,18 @@ class IntervalsClientTest {
     }
 
     @Test
+    fun `parses start_date with negative and positive utc offsets`() {
+        server.enqueue(MockResponse().setBody("""[
+          {"id":"i1","start_date":"2026-09-03T07:10:05-05:00","name":null,"type":"Run","source":"ZEPP","device_name":null},
+          {"id":"i2","start_date":"2026-09-03T07:10:05+02:00","name":null,"type":"Run","source":"ZEPP","device_name":null}
+        ]"""))
+        val list = api.listActivities(Instant.parse("2026-09-03T05:00:00Z"), Instant.parse("2026-09-03T11:00:00Z"))
+        server.takeRequest()
+        assertEquals(Instant.parse("2026-09-03T12:10:05Z"), list[0].startDate)
+        assertEquals(Instant.parse("2026-09-03T05:10:05Z"), list[1].startDate)
+    }
+
+    @Test
     fun `gets streams with nulls`() {
         server.enqueue(MockResponse().setBody("""[{"type":"time","data":[0,1,2]},{"type":"heartrate","data":[120,null,122]}]"""))
         val s = api.getStreams("i100", listOf("time", "heartrate"))
