@@ -44,8 +44,8 @@ class RecorderService : Service() {
         Notifications.ensureChannels(this)
         Graph.sessions.recoverOnStartup(System.currentTimeMillis())
         connector = StrapConnector(this, Graph.live, Graph.sessions, Graph.settings, scope)
-        if (CompanionAssociation.isSupported(this) && CompanionAssociation.associationIds(this).isNotEmpty()) {
-            CompanionAssociation.startObserving(this)
+        if (CompanionAssociation.isSupported(this)) {
+            Graph.observingCount = CompanionAssociation.startObserving(this)
         }
     }
 
@@ -77,6 +77,7 @@ class RecorderService : Service() {
                     } else {
                         connector.stop()
                         CompanionAssociation.stopObserving(this@RecorderService)
+                        Graph.observingCount = 0
                         stopSelf()
                     }
                 }

@@ -21,6 +21,13 @@ object Graph {
     @Volatile
     var strapPresence: StrapPresence = StrapPresence.UNKNOWN
 
+    /** How many paired associations `CompanionAssociation.startObserving` last
+     *  succeeded in starting presence observation for. Compared against the paired
+     *  count in the UI so a platform-level failure (e.g. presence observation silently
+     *  not engaging) surfaces instead of quietly degrading to always-on. */
+    @Volatile
+    var observingCount: Int = 0
+
     fun init(context: Context) {
         if (this::settings.isInitialized) return
         settings = PrefsSettingsStore(context)

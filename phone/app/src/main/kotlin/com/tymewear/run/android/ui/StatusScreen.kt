@@ -35,6 +35,7 @@ fun StatusScreen(
     onPairStrap: () -> Unit,
     onUnpairStrap: () -> Unit,
     pairedCount: Int,
+    observingCount: Int,
 ) {
     val context = LocalContext.current
     var payload by remember { mutableStateOf<LivePayload?>(null) }
@@ -80,6 +81,8 @@ fun StatusScreen(
         val supported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
         if (!supported) {
             Text("Requires Android 12 or newer")
+        } else if (pairedCount > 0 && observingCount == 0) {
+            Text("Paired, but presence detection unavailable — the service will run all the time")
         } else if (pairedCount > 0) {
             Text("Paired: $pairedCount device(s)")
         } else {

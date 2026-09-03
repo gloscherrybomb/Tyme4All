@@ -24,7 +24,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import com.tymewear.run.android.CompanionAssociation
+import com.tymewear.run.android.Graph
 import com.tymewear.run.android.RecorderService
+import com.tymewear.run.domain.StrapPresence
 import timber.log.Timber
 
 class MainActivity : ComponentActivity() {
@@ -41,6 +43,8 @@ class MainActivity : ComponentActivity() {
 
     var pairedCount = mutableStateOf(0)
         private set
+    var observingCount = mutableStateOf(0)
+        private set
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,6 +59,7 @@ class MainActivity : ComponentActivity() {
                         onPairStrap = { pairStrap() },
                         onUnpairStrap = { unpairStrap() },
                         pairedCount = pairedCount.value,
+                        observingCount = observingCount.value,
                     )
                 }
             }
@@ -82,7 +87,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun onAssociationCreated() {
-        CompanionAssociation.startObserving(this)
+        Graph.observingCount = CompanionAssociation.startObserving(this)
+        observingCount.value = Graph.observingCount
         RecorderService.start(this)
         refreshPairedCount()
     }
@@ -90,11 +96,18 @@ class MainActivity : ComponentActivity() {
     private fun unpairStrap() {
         CompanionAssociation.stopObserving(this)
         CompanionAssociation.disassociateAll(this)
+        Graph.observingCount = 0
+        observingCount.value = 0
+        // Unpairing must not leave a stale AWAY reading behind: with no association left
+        // to report presence, the housekeeping loop should treat the strap the same as
+        // "never paired" (UNKNOWN), not stop the service on an answer that can never update.
+        Graph.strapPresence = StrapPresence.UNKNOWN
         refreshPairedCount()
     }
 
     private fun refreshPairedCount() {
-        pairedCount.value = if (CompanionAssociation.isSupported(this)) CompanionAssociation.associationIds(this).size else 0
+        pairedCount.value = if (CompanionAssociation.isSupported(this)) CompanionAssociation.associations(this).size else 0
+        observingCount.value = Graph.observingCount
     }
 
     override fun onResume() {
@@ -138,6 +151,7 @@ fun MainScreen(
     onPairStrap: () -> Unit,
     onUnpairStrap: () -> Unit,
     pairedCount: Int,
+    observingCount: Int,
 ) {
     var selected by remember { mutableIntStateOf(0) }
 
@@ -162,6 +176,7 @@ fun MainScreen(
                     onPairStrap = onPairStrap,
                     onUnpairStrap = onUnpairStrap,
                     pairedCount = pairedCount,
+                    observingCount = observingCount,
                 )
                 1 -> SettingsScreen()
                 else -> SessionsScreen()
