@@ -11,7 +11,7 @@
   },
   "permissions": ["data:user.hd.heart_rate"],
   "runtime": {
-    "apiVersion": { "minVersion": "3.6", "target": "4.3", "compatible": "3.6" }
+    "apiVersion": { "minVersion": "3.6", "target": "4.4", "compatible": "3.6" }
   },
   "targets": {
     "cheetah-2-ultra": {
@@ -29,8 +29,8 @@
         "app-side": { "path": "app-side/index" }
       },
       "platforms": [
-        { "name": "cheetah2ultra", "deviceSource": 9961728 },
-        { "name": "cheetah2ultra_b", "deviceSource": 9961729 }
+        { "name": "cheetah2ultra", "deviceSource": 9978112 },
+        { "name": "cheetah2ultra_wn", "deviceSource": 9978113 }
       ],
       "designWidth": 480
     }
