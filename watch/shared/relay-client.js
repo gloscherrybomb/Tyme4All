@@ -1,0 +1,25 @@
+import { RELAY_BASE } from './constants.js'
+
+async function readBody(res) {
+  if (typeof res.json === 'function') return res.json()
+  const b = res.body
+  return typeof b === 'string' ? JSON.parse(b) : b
+}
+
+export class RelayClient {
+  constructor(fetchImpl, baseUrl = RELAY_BASE) {
+    this.fetch = fetchImpl
+    this.base = baseUrl
+  }
+
+  async #call(method, path) {
+    const res = await this.fetch({ method, url: this.base + path, headers: { 'Content-Type': 'application/json' } })
+    if (!res || res.status < 200 || res.status >= 300) throw new Error(`relay HTTP ${res ? res.status : 'none'}`)
+    return readBody(res)
+  }
+
+  health() { return this.#call('GET', '/health') }
+  live() { return this.#call('GET', '/live') }
+  start() { return this.#call('POST', '/session/start') }
+  stop() { return this.#call('POST', '/session/stop') }
+}
