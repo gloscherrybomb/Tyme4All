@@ -1,0 +1,15 @@
+{
+  "name": "kbreathe-watch",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/",
+    "dev": "zeus dev",
+    "build": "zeus build",
+    "mock-relay": "node tools/mock-relay.js"
+  },
+  "dependencies": {
+    "@zeppos/zml": "0.0.41"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "configVersion": "v3",
+  "app": {
+    "appId": 1000001,
+    "appName": "K-Breathe",
+    "appType": "app",
+    "version": { "code": 1, "name": "0.1.0" },
+    "icon": "icon.png",
+    "vender": "James Eastwood",
+    "description": "Tymewear VitalPro breathing data during a run"
+  },
+  "permissions": [
+    { "code": "data:user.hd.heart_rate" }
+  ],
+  "runtime": {
+    "apiVersion": { "minVersion": "3.6", "target": "4.3", "compatible": "3.6" }
+  },
+  "targets": {
+    "cheetah-2-ultra": {
+      "module": {
+        "data-widget": {
+          "widgets": [
+            {
+              "path": "page/index",
+              "name": "K-Breathe",
+              "icon": "icon.png",
+              "runtime": { "ability": [ { "type": 1, "subType": [1, 2, 3, 4, 5, 6] } ] }
+            }
+          ]
+        },
+        "app-side": { "path": "app-side/index" }
+      },
+      "platforms": [
+        { "name": "cheetah2ultra", "deviceSource": 9961728 },
+        { "name": "cheetah2ultra_b", "deviceSource": 9961729 }
+      ],
+      "designWidth": 480
+    }
+  },
+  "i18n": { "en-US": { "appName": "K-Breathe" } },
+  "defaultLanguage": "en-US"
+}
