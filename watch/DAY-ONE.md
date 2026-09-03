@@ -161,7 +161,7 @@ watch display does.
 
 After the run ends, wait for the phone notification "Run synced to
 Intervals.icu". Open the matched activity's custom chart and confirm
-`tyme_minute_volume` (and the other custom streams) render.
+`TymeVentilation` (and the other custom streams) render.
 
 - [ ] **Result:** _______________
 

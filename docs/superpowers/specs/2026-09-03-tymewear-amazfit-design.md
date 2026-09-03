@@ -142,13 +142,13 @@ Zero touch. The phone waits for the watch's run to appear and attaches the breat
 
    | Code | Units | Name |
    |---|---|---|
-   | `tyme_minute_volume` | L/min | VE |
-   | `tyme_breath_rate` | brpm | Breathing rate |
-   | `tyme_tidal_volume` | L | Tidal volume |
-   | `tyme_inhale_exhale_ratio` | ratio | I:E ratio |
-   | `tyme_ve_zone` | zone | VE zone |
-   | `tyme_percent_brr` | % | Breathing reserve used |
-   | `tyme_mobilization_index` | % | Mobilization index |
+   | `TymeVentilation` | L/min | VE |
+   | `TymeBreathRate` | brpm | Breathing rate |
+   | `TymeTidalVolume` | L | Tidal volume |
+   | `TymeIERatio` | ratio | I:E ratio |
+   | `TymeVeZone` | zone | VE zone |
+   | `TymeBreathReserve` | % | Breathing reserve used |
+   | `TymeMobilizationIndex` | % | Mobilization index |
 
    The codes match the developer field names Tymewear uses in FIT files, so if any other Tymewear-recorded activity lands in Intervals.icu with those record fields, it shares the same streams and charts. That is a convenience, not a requirement.
 
@@ -167,7 +167,7 @@ Zero touch. The phone waits for the watch's run to appear and attaches the breat
 ### 6.3 Idempotence and re-runs
 
 - A session records which activity it was pushed to and when. Re-running the sync (button in the session list) recomputes and re-pushes; Intervals.icu overwrites the streams.
-- If thresholds or reserve settings change, `tyme_ve_zone`, `tyme_percent_brr` and `tyme_mobilization_index` can be recomputed from the raw log plus the activity's heart rate and re-pushed for any kept session.
+- If thresholds or reserve settings change, `TymeVeZone`, `TymeBreathReserve` and `TymeMobilizationIndex` can be recomputed from the raw log plus the activity's heart rate and re-pushed for any kept session.
 - Sessions with no matching activity after 6 hours are marked "unmatched" and left for manual matching. They are not deleted.
 
 ### 6.4 What is deliberately not done
@@ -175,7 +175,7 @@ Zero touch. The phone waits for the watch's run to appear and attaches the breat
 - No upload of the phone's FIT to Intervals.icu (would create a duplicate activity).
 - No deletion of anything in Intervals.icu.
 - No Tymewear dashboard upload (no public API), and no FIT file on the phone at all. Intervals.icu is the single destination.
-- No session-level custom activity fields in the first version. Time-in-zone can be derived in Intervals.icu from the `tyme_ve_zone` stream with a custom field script if wanted.
+- No session-level custom activity fields in the first version. Time-in-zone can be derived in Intervals.icu from the `TymeVeZone` stream with a custom field script if wanted.
 
 ### 6.5 Beta ventilatory state: deferred, not excluded
 

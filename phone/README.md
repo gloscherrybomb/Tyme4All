@@ -39,13 +39,13 @@ Do this once, on the Status and Settings tabs.
 
    | Code | Units |
    |---|---|
-   | `tyme_minute_volume` | L/min |
-   | `tyme_breath_rate` | brpm |
-   | `tyme_tidal_volume` | L |
-   | `tyme_inhale_exhale_ratio` | ratio |
-   | `tyme_ve_zone` | zone |
-   | `tyme_percent_brr` | % |
-   | `tyme_mobilization_index` | % |
+   | `TymeVentilation` | L/min |
+   | `TymeBreathRate` | brpm |
+   | `TymeTidalVolume` | L |
+   | `TymeIERatio` | ratio |
+   | `TymeVeZone` | zone |
+   | `TymeBreathReserve` | % |
+   | `TymeMobilizationIndex` | % |
 
    The Settings tab has a **Copy codes** button that copies this list to the clipboard so you can paste codes in as you go.
 6. **Link Zepp to Intervals.icu.** In the Zepp app: Profile → third-party account linking, and connect Intervals.icu. This is what gets your Amazfit runs onto Intervals.icu in the first place.
@@ -99,4 +99,4 @@ This checklist exercises the app end to end against the live Intervals.icu API. 
 
 1. **Create the custom streams in Intervals.icu**, if you haven't already under First-time setup: open any activity → Charts → Custom Streams → Add Stream, and create the seven codes and units listed above (or copy them from the Settings tab's Copy codes button).
 2. **Record a manual session.** Wear the strap and, on the Status tab, tap Start session. At the same time, start recording an activity on any device that syncs to Intervals.icu (the Amazfit watch, a Karoo, or anything else). Wear the strap for at least two minutes, then stop both. Within a few minutes, the Sessions tab should show the session as `synced` with an activity id, and you should get a "Run synced to Intervals.icu" notification. If the activity comes from a non-Amazfit device, the matcher still picks it up as long as it's the only candidate in the window.
-3. **Verify in Intervals.icu.** Open the matched activity, go to Charts, and add `tyme_minute_volume` to a custom chart. The VE trace should appear over the minutes you were recording, and be blank elsewhere.
+3. **Verify in Intervals.icu.** Open the matched activity, go to Charts, and add `TymeVentilation` to a custom chart. The VE trace should appear over the minutes you were recording, and be blank elsewhere.

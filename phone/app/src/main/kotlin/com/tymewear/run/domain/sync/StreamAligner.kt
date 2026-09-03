@@ -7,13 +7,13 @@ import java.time.Instant
 import kotlin.math.floor
 
 object StreamCodes {
-    const val VE = "tyme_minute_volume"
-    const val BR = "tyme_breath_rate"
-    const val TV = "tyme_tidal_volume"
-    const val IE = "tyme_inhale_exhale_ratio"
-    const val ZONE = "tyme_ve_zone"
-    const val BRR = "tyme_percent_brr"
-    const val MI = "tyme_mobilization_index"
+    const val VE = "TymeVentilation"
+    const val BR = "TymeBreathRate"
+    const val TV = "TymeTidalVolume"
+    const val IE = "TymeIERatio"
+    const val ZONE = "TymeVeZone"
+    const val BRR = "TymeBreathReserve"
+    const val MI = "TymeMobilizationIndex"
     val ALL = listOf(VE, BR, TV, IE, ZONE, BRR, MI)
 }
 

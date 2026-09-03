@@ -58,13 +58,13 @@ class IntervalsClientTest {
 
     @Test
     fun `puts custom streams`() {
-        server.enqueue(MockResponse().setBody("""{"updated":["tyme_minute_volume"],"deleted":[]}"""))
-        val r = api.putStreams("i100", listOf(Stream("tyme_minute_volume", listOf(40.0, null), custom = true)))
+        server.enqueue(MockResponse().setBody("""{"updated":["TymeVentilation"],"deleted":[]}"""))
+        val r = api.putStreams("i100", listOf(Stream("TymeVentilation", listOf(40.0, null), custom = true)))
         val req = server.takeRequest()
         assertEquals("PUT", req.method)
         assertEquals("/api/v1/activity/i100/streams", req.path)
-        assertEquals("""[{"type":"tyme_minute_volume","custom":true,"data":[40.0,null]}]""", req.body.readUtf8())
-        assertEquals(listOf("tyme_minute_volume"), r.updated)
+        assertEquals("""[{"type":"TymeVentilation","custom":true,"data":[40.0,null]}]""", req.body.readUtf8())
+        assertEquals(listOf("TymeVentilation"), r.updated)
     }
 
     @Test

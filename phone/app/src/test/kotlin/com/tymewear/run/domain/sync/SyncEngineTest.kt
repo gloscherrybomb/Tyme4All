@@ -81,7 +81,7 @@ class SyncEngineTest {
             putResult = UpdateStreamsResult(StreamCodes.ALL - StreamCodes.MI, emptyList())
         }
         val out = SyncEngine(api, store).sync(id, settings, startMs + 700_000)
-        assertEquals(SyncOutcome.Failed("streams not accepted: tyme_mobilization_index"), out)
+        assertEquals(SyncOutcome.Failed("streams not accepted: ${StreamCodes.MI}"), out)
         assertEquals("failed", store.meta(id)!!.syncState)
     }
 
