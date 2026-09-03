@@ -34,3 +34,13 @@ test('non 2xx throws', async () => {
   const c = new RelayClient(zeppFetch([], 500, 'boom'))
   await assert.rejects(() => c.live(), /relay HTTP 500/)
 })
+
+test('every request carries a 3s timeout so a hung request cannot wedge polling', async () => {
+  const log = []
+  const c = new RelayClient(zeppFetch(log, 200, '{"ve":1}'))
+  await c.live()
+  await c.start()
+  await c.stop()
+  await c.health()
+  for (const opts of log) assert.equal(opts.timeout, 3000)
+})

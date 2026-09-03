@@ -37,19 +37,40 @@ which polls the phone app's local relay at `http://127.0.0.1:41415`
 |---|---|---|---|
 | watch -> side (request) | `session.start` | none | `{ sessionId }` or error string |
 | watch -> side (request) | `session.stop` | none | `{ sessionId }` or error string |
-| watch -> side (call) | `live.poll.start` | none | none; side starts pushing |
-| watch -> side (call) | `live.poll.stop` | none | none |
+| watch -> side (call) | `live.poll.start` | none | none; side starts pushing, and grants/renews a 15 s polling lease |
+| watch -> side (call) | `live.poll.stop` | none | none; also satisfied automatically if the lease expires |
 | side -> watch (call) | `live` | `{ payload, ok: true }` or `{ ok: false, error }` | none |
 
 `session.start` fires from the page's `onInit`; `session.stop` is expected
 from `onDestroy` (see the day-one checklist — this timing is unverified on
 real hardware and has a documented fallback).
 
+**Session-start retry latch.** A `session.start` request can be lost (Zepp
+app or phone app not up yet). The side service (`app-side/index.js`)
+latches `wantSession = true` the moment the request arrives, before calling
+the relay, so it survives that call failing. On every successful `/live`
+poll it checks the payload's `sessionId` (the source of truth, not the
+original request's result) via the pure `shouldRequestStart` function in
+`shared/session-latch.js`: if `wantSession` is true and `sessionId` is
+still null/undefined, it calls `relay.start()` again. The phone's start is
+idempotent, so this is safe to retry on every poll until a session opens.
+`session.stop` clears the latch.
+
+**Poll lease.** `live.poll.start` is a lease, not a one-shot toggle: the
+side service records the time of every `live.poll.start` call
+(`lastArmedMs`), and `pushLive` stops the poller if more than
+`POLL_LEASE_MS` (15 s, `shared/constants.js`) has passed since the last
+grant. The page's existing 1 s render timer re-sends `live.poll.start` on
+every tick to keep the lease renewed while the page is visible, so a lost
+`live.poll.stop` (e.g. on `onPause` failing to reach the side service)
+still stops polling on its own within 15 s instead of running forever.
+`live.poll.stop` continues to work immediately as before.
+
 ## Build and install
 
 ```bash
 cd watch
-npm test           # node --test test/ — 18 unit tests, no device needed
+npm test           # node --test test/ — 25 unit tests, no device needed
 npm run build       # zeus build   -> watch/dist/<appId>-K-Breathe-<version>-<timestamp>.zab
 npm run dev          # zeus dev    -> interactive Zepp OS simulator (see Simulator notes below)
 ```
@@ -104,11 +125,13 @@ preview` accept and that produced a working install:
 
 ## Testing
 
-`npm test` runs the full unit suite (`node --test test/`, 18 tests): zone
+`npm test` runs the full unit suite (`node --test test/`, 25 tests): zone
 colours, the loopback relay port, %HRR/%BRR/MI math against the phone's
-formula, the poller, and the mock relay's health/live/session-lifecycle
-endpoints, plus view-model rendering for the connected/stale/disconnected
-states. No device or simulator is required.
+formula, the poller (including the busy-lock reset on `stop()`), the relay
+client's fetch timeout, the session-start retry latch, and the mock
+relay's health/live/session-lifecycle endpoints, plus view-model rendering
+for the connected/stale/disconnected states. No device or simulator is
+required.
 
 Beyond unit tests, two more things are worth doing before hardware, and a
 full checklist of things that need the real watch:

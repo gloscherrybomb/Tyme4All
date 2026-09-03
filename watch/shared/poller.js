@@ -22,6 +22,7 @@ export class Poller {
   }
 
   stop() {
+    this.busy = false
     if (this.handle === null) return
     this.timers.clearInterval(this.handle)
     this.handle = null

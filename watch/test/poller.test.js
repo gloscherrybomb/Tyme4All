@@ -46,3 +46,17 @@ test('tick errors do not stop the poller', async () => {
   assert.equal(calls, 2)
   assert.equal(p.running, true)
 })
+
+test('stop() during an in-flight tick clears busy so a later start() ticks immediately', async () => {
+  const t = fakeTimers(); let n = 0
+  let release
+  const p = new Poller(() => new Promise((r) => { n++; release = r }), 1000, t)
+  p.start()
+  await Promise.resolve()
+  assert.equal(n, 1) // first tick started, never resolved
+  p.stop()            // without resetting `busy`, this leaves the poller permanently wedged
+  p.start()
+  await Promise.resolve()
+  assert.equal(n, 2)  // restart still ticks immediately
+  release()
+})

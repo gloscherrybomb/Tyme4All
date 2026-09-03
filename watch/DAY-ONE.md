@@ -23,6 +23,22 @@ VE climbing within 2 s, background cycling through the zone colours, the
 mock relay logging `session start`/`session stop`, and the page turning
 grey with `phone?` within 5 s of stopping the mock relay.
 
+Also confirm while the simulator is up:
+
+- **Nothing is clipped at the bezel.** Every text box (status, battery,
+  VE, unit, zone name, and the BR/TV/MI value and label row) should sit
+  fully inside the round display with visible margin on all sides —
+  nothing cut off by the circular edge, especially the battery readout at
+  top and the BR/MI % labels at the bottom of the row.
+- **The background actually recolours when the zone changes.** Drive (or
+  simulate) VE through a couple of zone thresholds and confirm the full-
+  screen background genuinely changes colour each time (teal to blue to
+  amber, etc.), not just the text. `w.bg.setProperty(prop.MORE, { color })`
+  on a `FILL_RECT` is not universally supported across Zepp OS firmware —
+  if the background stays fixed while the zone name/text still updates,
+  that's the fallback trigger: recreate the `FILL_RECT` widget on colour
+  change instead of calling `setProperty` on it.
+
 ## 1. Developer mode and sideload install
 
 Zepp app: Profile, Settings, About, tap the version seven times to enable

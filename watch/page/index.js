@@ -1,5 +1,5 @@
 // If DataWidget(BasePage(...)) fails at runtime because ZML expects Page, fall back to the
-// MessageBuilder pattern documented at the bottom of this file's task brief (Step 1 note).
+// MessageBuilder pattern documented in the "Device and API facts" section of watch/README.md.
 
 import { BasePage } from '@zeppos/zml/base-page'
 import { createWidget, widget, prop, align } from '@zos/ui'
@@ -21,6 +21,7 @@ DataWidget(
       timer: null,
       heartRate: null,
       onHr: null,
+      lastError: null,
     },
 
     onInit() {
@@ -33,17 +34,20 @@ DataWidget(
       const vm = buildViewModel(this.state, Date.now())
       const w = {}
       w.bg = createWidget(widget.FILL_RECT, { x: 0, y: 0, w: SCREEN.w, h: SCREEN.h, color: vm.bg })
-      w.status = text(90, 34, 300, 36, 28, vm.statusColor, align.CENTER_H, vm.status)
-      w.battery = text(300, 34, 120, 36, 24, COLOR_MUTED, align.RIGHT, vm.battery)
+      // Layout is constrained to the 480x480 round bezel: every box's four corners satisfy
+      // (x-240)^2 + (y-240)^2 <= 240^2. See watch/README.md and the branch review report for
+      // the corner arithmetic behind each of these boxes.
+      w.status = text(130, 34, 220, 36, 28, vm.statusColor, align.CENTER_H, vm.status)
+      w.battery = text(140, 76, 200, 30, 24, COLOR_MUTED, align.CENTER_H, vm.battery)
       w.ve = text(40, 120, 400, 150, 140, COLOR_TEXT, align.CENTER_H, vm.ve)
       w.unit = text(40, 262, 400, 30, 26, COLOR_MUTED, align.CENTER_H, 'L/min')
       w.zone = text(40, 292, 400, 40, 34, COLOR_TEXT, align.CENTER_H, vm.zoneName)
-      w.br = text(40, 350, 130, 60, 56, COLOR_TEXT, align.CENTER_H, vm.br)
-      w.tv = text(175, 350, 130, 60, 56, COLOR_TEXT, align.CENTER_H, vm.tv)
-      w.mi = text(310, 350, 130, 60, 56, COLOR_TEXT, align.CENTER_H, vm.mi)
-      text(40, 410, 130, 30, 22, COLOR_MUTED, align.CENTER_H, 'BR')
-      text(175, 410, 130, 30, 22, COLOR_MUTED, align.CENTER_H, 'TV')
-      text(310, 410, 130, 30, 22, COLOR_MUTED, align.CENTER_H, 'MI %')
+      w.br = text(90, 336, 120, 58, 56, COLOR_TEXT, align.CENTER_H, vm.br)
+      w.tv = text(180, 336, 120, 58, 56, COLOR_TEXT, align.CENTER_H, vm.tv)
+      w.mi = text(270, 336, 120, 58, 56, COLOR_TEXT, align.CENTER_H, vm.mi)
+      text(90, 394, 120, 24, 22, COLOR_MUTED, align.CENTER_H, 'BR')
+      text(180, 394, 120, 24, 22, COLOR_MUTED, align.CENTER_H, 'TV')
+      text(270, 394, 120, 24, 22, COLOR_MUTED, align.CENTER_H, 'MI %')
       this.state.widgets = w
     },
 
@@ -79,13 +83,20 @@ DataWidget(
 
     onResume() {
       this.startHr()
-      this.call({ method: 'live.poll.start' })
-      if (this.state.timer === null) this.state.timer = setInterval(() => this.render(), 1000)
+      this.call({ method: 'live.poll.start' }).catch(() => {})
+      if (this.state.timer === null) {
+        // Re-send live.poll.start on every render tick as well, so the side service's poll
+        // lease (POLL_LEASE_MS in shared/constants.js) keeps renewing while the page is visible.
+        this.state.timer = setInterval(() => {
+          this.call({ method: 'live.poll.start' }).catch(() => {})
+          this.render()
+        }, 1000)
+      }
       this.render()
     },
 
     onPause() {
-      this.call({ method: 'live.poll.stop' })
+      this.call({ method: 'live.poll.stop' }).catch(() => {})
       this.stopHr()
       if (this.state.timer !== null) { clearInterval(this.state.timer); this.state.timer = null }
     },
@@ -95,6 +106,9 @@ DataWidget(
       if (data.params && data.params.ok) {
         this.state.payload = data.params.payload
         this.state.receivedAtMs = Date.now()
+      } else if (data.params && data.params.ok === false) {
+        console.log('live push failed', data.params.error)
+        this.state.lastError = data.params.error
       }
       this.render()
     },
