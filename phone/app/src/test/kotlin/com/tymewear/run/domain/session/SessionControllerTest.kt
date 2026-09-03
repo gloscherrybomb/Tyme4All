@@ -103,6 +103,16 @@ class SessionControllerTest {
     }
 
     @Test
+    fun `fallbackDisconnectedMs is live and applies to the next tick`() {
+        val c = ctl()
+        c.onStrap(true, 0)
+        c.start(1_000, "watch")
+        c.onStrap(false, 0)
+        c.fallbackDisconnectedMs = 60_000
+        assertEquals("strap-disconnected", c.tick(60_001))
+    }
+
+    @Test
     fun `listener is told about changes`() {
         val c = ctl()
         val seen = mutableListOf<String?>()

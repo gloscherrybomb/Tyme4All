@@ -9,9 +9,10 @@ import com.tymewear.run.domain.Protocol
  */
 class SessionController(
     private val store: SessionStore,
-    private val fallbackDisconnectedMs: Long = Constants.FALLBACK_STOP_DISCONNECTED_MS,
+    fallbackDisconnectedMs: Long = Constants.FALLBACK_STOP_DISCONNECTED_MS,
     private val maxSessionMs: Long = Constants.MAX_SESSION_MS,
 ) {
+    var fallbackDisconnectedMs: Long = fallbackDisconnectedMs
     private val lock = Any()
     private var log: SessionLog? = null
     private var id: String? = null

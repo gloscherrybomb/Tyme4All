@@ -16,6 +16,7 @@ import com.tymewear.run.domain.sync.SyncScheduler
 import fi.iki.elonen.NanoHTTPD
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -29,6 +30,8 @@ class RecorderService : Service() {
     private lateinit var connector: StrapConnector
     private var relay: RelayServer? = null
     private var lastPruneMs = 0L
+    private var settingsJob: Job? = null
+    private var housekeepingJob: Job? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -42,20 +45,29 @@ class RecorderService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val n = Notifications.serviceNotification(this, "Starting")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) startForeground(Notifications.ID_SERVICE, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
-        else startForeground(Notifications.ID_SERVICE, n)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) startForeground(Notifications.ID_SERVICE, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+            else startForeground(Notifications.ID_SERVICE, n)
+        } catch (e: Exception) {
+            Timber.w(e, "startForeground failed; continuing without foreground promotion")
+        }
 
         if (relay == null) {
             relay = RelayServer(Constants.RELAY_PORT, Graph.live, Graph.settings, Graph.sessions, version = BuildConfig.VERSION_NAME)
                 .also { it.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false) }
         }
-        scope.launch {
-            Graph.settings.changes.collect { s ->
-                Graph.live.setServiceEnabled(s.serviceEnabled)
-                if (s.serviceEnabled) connector.start() else connector.stop()
+        if (settingsJob?.isActive != true) {
+            settingsJob = scope.launch {
+                Graph.settings.changes.collect { s ->
+                    Graph.live.setServiceEnabled(s.serviceEnabled)
+                    Graph.sessions.fallbackDisconnectedMs = s.fallbackStopMinutes * 60_000L
+                    if (s.serviceEnabled) connector.start() else connector.stop()
+                }
             }
         }
-        scope.launch { housekeeping() }
+        if (housekeepingJob?.isActive != true) {
+            housekeepingJob = scope.launch { housekeeping() }
+        }
         return START_STICKY
     }
 
