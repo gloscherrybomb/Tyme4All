@@ -23,26 +23,47 @@ class SessionController(
 
     val activeSessionId: String? get() = synchronized(lock) { id }
 
-    fun start(nowMs: Long, source: String): String = synchronized(lock) {
-        id?.let { return it }
-        val newLog = store.create(nowMs, source)
-        log = newLog
-        val newId = SessionStore.idFor(nowMs)
-        id = newId
-        startMs = nowMs
-        if (!strapConnected) disconnectedSinceMs = nowMs
-        notify(newId)
-        newId
+    fun start(nowMs: Long, source: String): String {
+        var toNotify: String? = null
+        val result: String
+        synchronized(lock) {
+            val existing = id
+            if (existing != null) {
+                result = existing
+            } else {
+                val newLog = store.create(nowMs, source)
+                log = newLog
+                val newId = SessionStore.idFor(nowMs)
+                id = newId
+                startMs = nowMs
+                if (!strapConnected) disconnectedSinceMs = nowMs
+                result = newId
+                toNotify = newId
+            }
+        }
+        toNotify?.let { notify(it) }
+        return result
     }
 
-    fun stop(nowMs: Long, reason: String): String? = synchronized(lock) {
+    fun stop(nowMs: Long, reason: String): String? {
+        var stopped = false
+        val result: String?
+        synchronized(lock) {
+            result = stopLocked(nowMs, reason)
+            stopped = result != null
+        }
+        if (stopped) notify(null)
+        return result
+    }
+
+    /** Closes the currently open session. Must be called while holding [lock]. */
+    private fun stopLocked(nowMs: Long, reason: String): String? {
         val current = id ?: return null
         log?.close()
         log = null
         id = null
         store.finish(current, nowMs, reason)
-        notify(null)
-        current
+        return current
     }
 
     fun onBreath(d: Protocol.BreathingData, nowMs: Long) = synchronized(lock) {
@@ -60,22 +81,33 @@ class SessionController(
 
     /** Apply the fallback rules. Returns the stop reason when it stopped the session. */
     fun tick(nowMs: Long): String? {
-        val reason = synchronized(lock) {
-            if (id == null) return null
-            val since = disconnectedSinceMs
-            when {
-                since != null && nowMs - since > fallbackDisconnectedMs -> "strap-disconnected"
-                nowMs - startMs > maxSessionMs -> "max-length"
-                else -> null
+        var stopped = false
+        val reason: String?
+        synchronized(lock) {
+            if (id == null) {
+                reason = null
+            } else {
+                val since = disconnectedSinceMs
+                val r = when {
+                    since != null && nowMs - since > fallbackDisconnectedMs -> "strap-disconnected"
+                    nowMs - startMs > maxSessionMs -> "max-length"
+                    else -> null
+                }
+                if (r != null) {
+                    stopLocked(nowMs, r)
+                    stopped = true
+                }
+                reason = r
             }
-        } ?: return null
-        stop(nowMs, reason)
+        }
+        if (stopped) notify(null)
         return reason
     }
 
-    fun recoverOnStartup(nowMs: Long) {
+    fun recoverOnStartup(nowMs: Long) = synchronized(lock) {
+        val activeId = id
         for (m in store.list()) {
-            if (m.endMs == null) store.finish(m.id, nowMs, "restart")
+            if (m.endMs == null && m.id != activeId) store.finish(m.id, nowMs, "restart")
         }
     }
 

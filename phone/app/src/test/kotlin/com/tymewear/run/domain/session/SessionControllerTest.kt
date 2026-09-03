@@ -78,6 +78,31 @@ class SessionControllerTest {
     }
 
     @Test
+    fun `session started after disconnect timer already expired is not stopped by tick`() {
+        val c = ctl()
+        c.onStrap(false, 0)
+        c.start(1_000_000, "watch")
+        assertNull(c.tick(1_000_000 + 599_999))
+        assertEquals("strap-disconnected", c.tick(1_000_000 + 600_001))
+    }
+
+    @Test
+    fun `recoverOnStartup does not close the in-memory active session`() {
+        val c = ctl()
+        val activeId = c.start(1_000, "watch")
+        val store = SessionStore(tmp.root)
+        store.create(500_000, "watch").close()
+        val otherId = SessionStore.idFor(500_000)
+
+        c.recoverOnStartup(9_000_000)
+
+        assertEquals(activeId, c.activeSessionId)
+        assertNull(store.meta(activeId)!!.endMs)
+        assertEquals(9_000_000L, store.meta(otherId)!!.endMs)
+        assertEquals("restart", (store.events(otherId).last() as SessionEvent.Stop).reason)
+    }
+
+    @Test
     fun `listener is told about changes`() {
         val c = ctl()
         val seen = mutableListOf<String?>()
