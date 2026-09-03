@@ -1,11 +1,14 @@
 package com.tymewear.run.android.ui
 
 import android.Manifest
+import android.companion.CompanionDeviceManager
+import android.content.IntentSender
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.NavigationBar
@@ -16,10 +19,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import com.tymewear.run.android.CompanionAssociation
 import com.tymewear.run.android.RecorderService
+import timber.log.Timber
 
 class MainActivity : ComponentActivity() {
 
@@ -28,17 +34,67 @@ class MainActivity : ComponentActivity() {
             if (result.values.any { it }) startRecorderServiceIfAllowed()
         }
 
+    private val associationLauncher =
+        registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+            if (result.resultCode == RESULT_OK) onAssociationCreated()
+        }
+
+    var pairedCount = mutableStateOf(0)
+        private set
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         startRecorderServiceIfAllowed()
+        refreshPairedCount()
 
         setContent {
             KBreatheTheme {
                 Surface {
-                    MainScreen(onRequestPermissions = { requestPermissions.launch(requiredPermissions()) })
+                    MainScreen(
+                        onRequestPermissions = { requestPermissions.launch(requiredPermissions()) },
+                        onPairStrap = { pairStrap() },
+                        onUnpairStrap = { unpairStrap() },
+                        pairedCount = pairedCount.value,
+                    )
                 }
             }
         }
+    }
+
+    private fun pairStrap() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+        val mgr = getSystemService(CompanionDeviceManager::class.java) ?: return
+        mgr.associate(
+            CompanionAssociation.associationRequest(),
+            mainExecutor,
+            object : CompanionDeviceManager.Callback() {
+                override fun onAssociationPending(intentSender: IntentSender) {
+                    associationLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
+                }
+                override fun onAssociationCreated(associationInfo: android.companion.AssociationInfo) {
+                    onAssociationCreated()
+                }
+                override fun onFailure(error: CharSequence?) {
+                    Timber.w("companion association failed: $error")
+                }
+            },
+        )
+    }
+
+    private fun onAssociationCreated() {
+        CompanionAssociation.startObserving(this)
+        RecorderService.start(this)
+        refreshPairedCount()
+    }
+
+    private fun unpairStrap() {
+        CompanionAssociation.stopObserving(this)
+        CompanionAssociation.disassociateAll(this)
+        refreshPairedCount()
+    }
+
+    private fun refreshPairedCount() {
+        pairedCount.value = if (CompanionAssociation.isSupported(this)) CompanionAssociation.associationIds(this).size else 0
     }
 
     override fun onResume() {
@@ -77,7 +133,12 @@ class MainActivity : ComponentActivity() {
 private val TAB_LABELS = listOf("Status", "Settings", "Sessions")
 
 @Composable
-fun MainScreen(onRequestPermissions: () -> Unit) {
+fun MainScreen(
+    onRequestPermissions: () -> Unit,
+    onPairStrap: () -> Unit,
+    onUnpairStrap: () -> Unit,
+    pairedCount: Int,
+) {
     var selected by remember { mutableIntStateOf(0) }
 
     Scaffold(
@@ -96,7 +157,12 @@ fun MainScreen(onRequestPermissions: () -> Unit) {
     ) { padding ->
         Surface(modifier = androidx.compose.ui.Modifier.padding(padding)) {
             when (selected) {
-                0 -> StatusScreen(onRequestPermissions = onRequestPermissions)
+                0 -> StatusScreen(
+                    onRequestPermissions = onRequestPermissions,
+                    onPairStrap = onPairStrap,
+                    onUnpairStrap = onUnpairStrap,
+                    pairedCount = pairedCount,
+                )
                 1 -> SettingsScreen()
                 else -> SessionsScreen()
             }

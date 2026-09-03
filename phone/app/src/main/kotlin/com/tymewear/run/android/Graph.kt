@@ -3,6 +3,7 @@ package com.tymewear.run.android
 import android.content.Context
 import com.tymewear.run.domain.LiveState
 import com.tymewear.run.domain.SettingsStore
+import com.tymewear.run.domain.StrapPresence
 import com.tymewear.run.domain.session.SessionController
 import com.tymewear.run.domain.session.SessionStore
 import java.io.File
@@ -12,6 +13,13 @@ object Graph {
     lateinit var live: LiveState
     lateinit var sessionStore: SessionStore
     lateinit var sessions: SessionController
+
+    /** Last known presence of the paired strap, from Companion Device Manager
+     *  callbacks in StrapPresenceService. UNKNOWN when unpaired or before the first
+     *  callback fires. Process-wide so RecorderService's housekeeping loop can read it
+     *  without a direct dependency on the CDM service. */
+    @Volatile
+    var strapPresence: StrapPresence = StrapPresence.UNKNOWN
 
     fun init(context: Context) {
         if (this::settings.isInitialized) return

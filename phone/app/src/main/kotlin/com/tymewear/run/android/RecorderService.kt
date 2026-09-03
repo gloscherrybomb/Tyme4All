@@ -8,6 +8,8 @@ import android.os.Build
 import android.os.IBinder
 import com.tymewear.run.BuildConfig
 import com.tymewear.run.domain.Constants
+import com.tymewear.run.domain.ServiceLifecycle
+import com.tymewear.run.domain.StrapStatus
 import com.tymewear.run.domain.relay.RelayServer
 import com.tymewear.run.domain.sync.IntervalsClient
 import com.tymewear.run.domain.sync.SyncEngine
@@ -32,6 +34,7 @@ class RecorderService : Service() {
     private var lastPruneMs = 0L
     private var settingsJob: Job? = null
     private var housekeepingJob: Job? = null
+    private var lastNotificationText: String? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -41,6 +44,9 @@ class RecorderService : Service() {
         Notifications.ensureChannels(this)
         Graph.sessions.recoverOnStartup(System.currentTimeMillis())
         connector = StrapConnector(this, Graph.live, Graph.sessions, Graph.settings, scope)
+        if (CompanionAssociation.isSupported(this) && CompanionAssociation.associationIds(this).isNotEmpty()) {
+            CompanionAssociation.startObserving(this)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -66,7 +72,13 @@ class RecorderService : Service() {
                 Graph.settings.changes.collect { s ->
                     Graph.live.setServiceEnabled(s.serviceEnabled)
                     Graph.sessions.fallbackDisconnectedMs = s.fallbackStopMinutes * 60_000L
-                    if (s.serviceEnabled) connector.start() else connector.stop()
+                    if (s.serviceEnabled) {
+                        connector.start()
+                    } else {
+                        connector.stop()
+                        CompanionAssociation.stopObserving(this@RecorderService)
+                        stopSelf()
+                    }
                 }
             }
         }
@@ -90,18 +102,36 @@ class RecorderService : Service() {
                     relay = null
                 }
             }
-            val status = Graph.live.status(now).wire
+            val status = Graph.live.status(now)
             val session = Graph.sessions.activeSessionId
             val text = buildString {
-                append("Strap ").append(status)
+                append(
+                    when (status) {
+                        StrapStatus.CONNECTED -> "Strap connected"
+                        StrapStatus.STALE -> "Strap data stale"
+                        StrapStatus.DISCONNECTED -> "Waiting for strap"
+                        StrapStatus.OFF -> "Service off"
+                    }
+                )
                 if (session != null) append(" · recording ").append(session)
                 if (relay == null) append(" · relay down")
             }
-            (getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager)
-                .notify(Notifications.ID_SERVICE, Notifications.serviceNotification(this, text))
+            if (text != lastNotificationText) {
+                lastNotificationText = text
+                (getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager)
+                    .notify(Notifications.ID_SERVICE, Notifications.serviceNotification(this, text))
+            }
 
             if (now - lastSyncMs >= 60_000) { lastSyncMs = now; runSyncPass(now) }
             if (now - lastPruneMs >= 86_400_000) { lastPruneMs = now; Graph.sessionStore.prune(now, Graph.settings.load().retentionDays) }
+
+            val settings = Graph.settings.load()
+            if (ServiceLifecycle.shouldStop(Graph.strapPresence, session != null, settings.serviceEnabled)) {
+                Timber.i("Stopping service: presence=${Graph.strapPresence}, session=$session, serviceEnabled=${settings.serviceEnabled}")
+                stopSelf()
+                return
+            }
+
             delay(10_000)
         }
     }

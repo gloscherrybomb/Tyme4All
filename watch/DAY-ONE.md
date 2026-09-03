@@ -167,3 +167,17 @@ Intervals.icu". Open the matched activity's custom chart and confirm
 
 **Unverified** — this exercises the full chain: watch to phone to
 Intervals.icu.
+
+## 8. Strap presence detection
+
+On the phone app's Status tab, pair the VitalPro strap ("Pair strap"). Confirm the
+service's notification appears when the strap is nearby and disappears (and no longer
+sits in the shade) within roughly a minute of walking away from the strap with no
+session running. Start a session, then walk away with the strap on — confirm the
+service and notification stay up for the whole session regardless of presence.
+
+- [ ] **Result:** _______________
+
+**Fallback:** if presence detection proves unreliable (false "away" reports, slow
+recovery, etc.), unpair the strap from the Status tab — the service reverts to running
+all the time, as it did before this feature.

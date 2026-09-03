@@ -3,6 +3,7 @@ package com.tymewear.run.android.ui
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -29,7 +30,12 @@ import kotlinx.coroutines.delay
 import androidx.compose.runtime.LaunchedEffect
 
 @Composable
-fun StatusScreen(onRequestPermissions: () -> Unit) {
+fun StatusScreen(
+    onRequestPermissions: () -> Unit,
+    onPairStrap: () -> Unit,
+    onUnpairStrap: () -> Unit,
+    pairedCount: Int,
+) {
     val context = LocalContext.current
     var payload by remember { mutableStateOf<LivePayload?>(null) }
 
@@ -66,6 +72,24 @@ fun StatusScreen(onRequestPermissions: () -> Unit) {
             OutlinedButton(onClick = {
                 Graph.sessions.stop(System.currentTimeMillis(), "manual")
             }) { Text("Stop session") }
+        }
+
+        HorizontalDivider()
+
+        Text("Strap pairing")
+        val supported = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+        if (!supported) {
+            Text("Requires Android 12 or newer")
+        } else if (pairedCount > 0) {
+            Text("Paired: $pairedCount device(s)")
+        } else {
+            Text("Not paired — the service will run all the time")
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(onClick = onPairStrap, enabled = supported) { Text("Pair strap") }
+            if (pairedCount > 0) {
+                OutlinedButton(onClick = onUnpairStrap, enabled = supported) { Text("Unpair") }
+            }
         }
 
         HorizontalDivider()

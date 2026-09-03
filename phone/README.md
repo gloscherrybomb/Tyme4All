@@ -74,6 +74,19 @@ On the Sessions tab you can:
 - **Retry sync** — re-run the poll/match/push for a session.
 - **Match by id** — enter an Intervals.icu activity id by hand to force the match.
 
+## Strap pairing
+
+On the Status tab, "Pair strap" registers the VitalPro with Android's Companion Device
+Manager (requires Android 12/API 31+). Once paired, the foreground service — and its
+persistent notification — only runs while the strap is nearby: Android's presence
+detection wakes the app when the strap comes into range and tells it when the strap goes
+away, instead of the service running all the time in the background. Detection is not
+instant; it can take tens of seconds for the system to notice the strap has left, and the
+service intentionally lags rather than guesses. A recording session in progress is never
+interrupted by this — the service keeps running for the full session even if presence
+detection reports the strap as away. Leaving the strap unpaired (or unpairing it again
+from the Status tab) reverts to the previous always-on behaviour.
+
 ## Notifications
 
 | Notification | Meaning |
