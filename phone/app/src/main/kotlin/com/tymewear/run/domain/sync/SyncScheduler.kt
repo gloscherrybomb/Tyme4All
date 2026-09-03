@@ -1,0 +1,17 @@
+package com.tymewear.run.domain.sync
+
+import com.tymewear.run.domain.Constants
+import com.tymewear.run.domain.session.SessionMeta
+
+object SyncScheduler {
+    fun due(metas: List<SessionMeta>, nowMs: Long, intervalMs: Long = Constants.SYNC_POLL_INTERVAL_MS, giveUpMs: Long = Constants.SYNC_GIVE_UP_MS): List<SessionMeta> =
+        metas.filter { m ->
+            val end = m.endMs ?: return@filter false
+            m.syncState == "pending" &&
+                nowMs - end <= giveUpMs &&
+                (m.lastSyncAttemptMs == null || nowMs - m.lastSyncAttemptMs >= intervalMs)
+        }
+
+    fun expired(metas: List<SessionMeta>, nowMs: Long, giveUpMs: Long = Constants.SYNC_GIVE_UP_MS): List<SessionMeta> =
+        metas.filter { m -> val end = m.endMs; end != null && m.syncState == "pending" && nowMs - end > giveUpMs }
+}
