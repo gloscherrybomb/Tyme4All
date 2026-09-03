@@ -5,7 +5,7 @@ Tymewear VitalPro breathing data on an Amazfit Cheetah 2 Ultra, recorded on the 
 ## Subprojects
 
 - [`phone/`](phone/README.md) — **K-Breathe Run**, the Android phone app. Connects to the strap, records sessions, and syncs breathing streams to Intervals.icu. Complete; see its README for setup, usage, and the first real run checklist.
-- `watch/` — **K-Breathe**, the Zepp OS workout extension for the watch. Not built yet; it's the next step, and drives session start/stop and the live watch display once it exists.
+- [`watch/`](watch/README.md) — **K-Breathe**, the Zepp OS workout extension for the watch. Drives session start/stop and the live watch display; see its README for the build/install commands and [`watch/DAY-ONE.md`](watch/DAY-ONE.md) for the checklist to run through once the watch is in hand.
 
 ## Design
 
