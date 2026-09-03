@@ -98,7 +98,7 @@ Relay endpoints:
 
 ### 4.1 Heart rate and the mobilization index on the watch
 
-The phone never sees live heart rate. The watch does, from its own optical sensor or a paired HR strap, through the Zepp OS heart rate sensor API. The extension therefore computes the HR-dependent numbers itself, using the Karoo app's formula (`TymewearData.recomputeMi`):
+The phone never sees live heart rate and never connects to a heart rate monitor. The Tymewear HR monitor (TymeHR) pairs with the watch as a normal external HR sensor, so the watch's heart rate is the strap's whenever it is worn and working, and the optical sensor's otherwise. The extension reads that value through the Zepp OS heart rate sensor API. The extension therefore computes the HR-dependent numbers itself, using the Karoo app's formula (`TymewearData.recomputeMi`):
 
 ```
 %HRR = (hr - restingHr) / (maxHr - restingHr) * 100
@@ -128,7 +128,7 @@ The **per-second series** (VE, BR, TV, I:E ratio, zone) is derived from the raw 
 
 Sessions are kept for 90 days, then pruned.
 
-The raw log contains no heart rate. HR-dependent streams are computed at sync time from the Intervals.icu heart rate stream (section 6.2).
+The raw log contains no heart rate. The watch records HR (from the paired TymeHR, or its optical sensor as fallback) into its own activity, and HR-dependent streams are computed at sync time from the Intervals.icu heart rate stream (section 6.2).
 
 ## 6. Intervals.icu sync (the merge)
 
@@ -245,7 +245,7 @@ Each item is a go/no-go for the corresponding part of the design.
 2. The workout extension appears in the Run app's data page configuration.
 3. `onInit` fires at run start and `onDestroy` at run end (log via side service).
 4. Side service can fetch `http://127.0.0.1:41415/health` while the phone app runs.
-4a. The heart rate sensor API returns live values inside the workout extension.
+4a. The heart rate sensor API returns live values inside the workout extension, and when the TymeHR is paired those values are the strap's, not the optical sensor's.
 5. A full run: watch shows live values, phone records without gaps, session start and stop arrive.
 6. The Zepp app survives the run in the background with battery optimisation disabled.
 7. Intervals.icu receives the run, and the streams push succeeds and shows in a custom chart.
