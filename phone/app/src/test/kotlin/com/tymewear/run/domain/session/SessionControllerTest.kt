@@ -1,0 +1,89 @@
+package com.tymewear.run.domain.session
+
+import com.tymewear.run.domain.Protocol
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.TemporaryFolder
+
+class SessionControllerTest {
+    @get:Rule val tmp = TemporaryFolder()
+    private fun ctl() = SessionController(SessionStore(tmp.root), fallbackDisconnectedMs = 600_000, maxSessionMs = 3_600_000)
+    private val d = Protocol.BreathingData(20.0, 1.5, 30.0, 1.0, 100, 100, 150, 0, 1)
+
+    @Test
+    fun `start is idempotent and stop closes`() {
+        val c = ctl()
+        val id = c.start(1_000, "watch")
+        assertEquals(id, c.start(2_000, "watch"))
+        assertEquals(id, c.activeSessionId)
+        assertEquals(id, c.stop(5_000, "watch"))
+        assertNull(c.activeSessionId)
+        assertNull(c.stop(6_000, "watch"))
+        val store = SessionStore(tmp.root)
+        assertEquals(5_000L, store.meta(id)!!.endMs)
+        assertEquals("watch", (store.events(id).last() as SessionEvent.Stop).reason)
+    }
+
+    @Test
+    fun `breaths are logged only inside a session`() {
+        val c = ctl()
+        c.onBreath(d, 500)
+        val id = c.start(1_000, "watch")
+        c.onBreath(d, 1_500)
+        c.onBattery(50, 1_600)
+        c.stop(2_000, "watch")
+        c.onBreath(d, 2_500)
+        val events = SessionStore(tmp.root).events(id)
+        assertEquals(listOf("start", "breath", "battery", "stop"), events.map { it::class.simpleName!!.lowercase() })
+    }
+
+    @Test
+    fun `fallback stop after strap disconnected long enough`() {
+        val c = ctl()
+        c.onStrap(true, 0)
+        c.start(1_000, "watch")
+        c.onStrap(false, 10_000)
+        assertNull(c.tick(10_000 + 599_999))
+        assertEquals("strap-disconnected", c.tick(10_000 + 600_001))
+        assertNull(c.activeSessionId)
+    }
+
+    @Test
+    fun `reconnect cancels the disconnected fallback`() {
+        val c = ctl()
+        c.start(1_000, "watch")
+        c.onStrap(false, 10_000)
+        c.onStrap(true, 300_000)
+        assertNull(c.tick(10_000 + 600_001))
+    }
+
+    @Test
+    fun `fallback stop at max session length`() {
+        val c = ctl()
+        c.start(1_000, "watch")
+        c.onStrap(true, 1_000)
+        assertEquals("max-length", c.tick(1_000 + 3_600_001))
+    }
+
+    @Test
+    fun `startup recovery closes an unfinished session`() {
+        val store = SessionStore(tmp.root)
+        store.create(1_000, "watch").close()
+        val c = SessionController(store)
+        c.recoverOnStartup(nowMs = 9_000)
+        assertEquals(9_000L, store.meta(SessionStore.idFor(1_000))!!.endMs)
+        assertEquals("restart", (store.events(SessionStore.idFor(1_000)).last() as SessionEvent.Stop).reason)
+    }
+
+    @Test
+    fun `listener is told about changes`() {
+        val c = ctl()
+        val seen = mutableListOf<String?>()
+        c.listener = { seen.add(it) }
+        val id = c.start(1_000, "manual")
+        c.stop(2_000, "manual")
+        assertEquals(listOf(id, null), seen)
+    }
+}
