@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -57,7 +57,7 @@ fun StatusScreen(onRequestPermissions: () -> Unit) {
         Text("Zone: ${p?.zone ?: 0}")
         Text("Active session: ${p?.sessionId ?: "none"}")
 
-        Divider()
+        HorizontalDivider()
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(onClick = {
@@ -68,12 +68,12 @@ fun StatusScreen(onRequestPermissions: () -> Unit) {
             }) { Text("Stop session") }
         }
 
-        Divider()
+        HorizontalDivider()
 
         Text("Permissions")
         Button(onClick = onRequestPermissions) { Text("Request permissions") }
 
-        Divider()
+        HorizontalDivider()
 
         Text("Battery optimisation")
         Button(onClick = { openBatteryOptimizationSettings(context) }) { Text("Battery optimisation") }

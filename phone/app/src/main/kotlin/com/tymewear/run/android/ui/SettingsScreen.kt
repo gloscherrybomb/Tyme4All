@@ -12,9 +12,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -61,10 +64,13 @@ fun SettingsScreen() {
 
     var keyTestResult by remember { mutableStateOf<String?>(null) }
     var keyTesting by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
+    Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { scaffoldPadding ->
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(scaffoldPadding)
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -75,7 +81,7 @@ fun SettingsScreen() {
         DoubleField("Top Z4", topZ4) { topZ4 = it }
         DoubleField("VO2max", vo2max) { vo2max = it }
 
-        Divider()
+        HorizontalDivider()
 
         Text("Reserve")
         DoubleField("Resting BR", restingBr) { restingBr = it }
@@ -83,7 +89,7 @@ fun SettingsScreen() {
         DoubleField("Resting HR", restingHr) { restingHr = it }
         DoubleField("Max HR", maxHr) { maxHr = it }
 
-        Divider()
+        HorizontalDivider()
 
         OutlinedTextField(value = sensorId, onValueChange = { sensorId = it }, label = { Text("Sensor id") })
 
@@ -92,7 +98,7 @@ fun SettingsScreen() {
             Switch(checked = serviceEnabled, onCheckedChange = { serviceEnabled = it })
         }
 
-        Divider()
+        HorizontalDivider()
 
         Text("Intervals.icu")
         OutlinedTextField(value = apiKey, onValueChange = { apiKey = it; keyTestResult = null }, label = { Text("API key") })
@@ -112,12 +118,12 @@ fun SettingsScreen() {
             keyTestResult?.let { Text(it) }
         }
 
-        Divider()
+        HorizontalDivider()
 
         IntField("Fallback stop minutes", fallbackStopMinutes) { fallbackStopMinutes = it }
         IntField("Retention days", retentionDays) { retentionDays = it }
 
-        Divider()
+        HorizontalDivider()
 
         Card(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -133,7 +139,7 @@ fun SettingsScreen() {
             }
         }
 
-        Divider()
+        HorizontalDivider()
 
         Button(onClick = {
             val vt1d = vt1.text.toDoubleOrNull()
@@ -173,8 +179,11 @@ fun SettingsScreen() {
                         retentionDays = retentionI,
                     ),
                 )
+            } else {
+                scope.launch { snackbarHostState.showSnackbar("Fix the highlighted fields") }
             }
         }) { Text("Save") }
+    }
     }
 }
 
