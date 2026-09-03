@@ -40,4 +40,5 @@ const server = http.createServer((req, res) => {
   send(404, { error: 'not found' })
 })
 
+server.on('error', (e) => { console.error('mock relay failed to listen:', e.message); process.exit(1) })
 server.listen(PORT, '127.0.0.1', () => console.log(`mock relay on http://127.0.0.1:${PORT}`))

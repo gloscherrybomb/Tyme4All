@@ -9,25 +9,25 @@ const scriptPath = path.join(__dirname, '..', 'tools', 'mock-relay.js')
 const PORT = 41416
 const BASE = `http://127.0.0.1:${PORT}`
 
-function startRelay() {
+function waitForReady(child) {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [scriptPath], {
-      env: { ...process.env, MOCK_RELAY_PORT: String(PORT) },
-    })
     const timer = setTimeout(() => reject(new Error('mock relay did not start in time')), 2000)
     child.stdout.on('data', (chunk) => {
       if (chunk.toString().includes('mock relay on')) {
         clearTimeout(timer)
-        resolve(child)
+        resolve()
       }
     })
-    child.on('error', reject)
+    child.on('error', (e) => { clearTimeout(timer); reject(e) })
   })
 }
 
 test('mock relay serves health, live and session lifecycle', async () => {
-  const child = await startRelay()
+  const child = spawn(process.execPath, [scriptPath], {
+    env: { ...process.env, MOCK_RELAY_PORT: String(PORT) },
+  })
   try {
+    await waitForReady(child)
     const health = await fetch(`${BASE}/health`).then((r) => r.json())
     assert.deepEqual(health, { ok: true, version: 'mock' })
 
