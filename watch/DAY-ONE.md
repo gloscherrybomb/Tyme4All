@@ -7,21 +7,39 @@ to each item — pass/fail and any notes — as you go.
 
 Fallbacks are copied from spec section 11 and noted inline where they apply.
 
-## 0. Simulator run (pre-hardware, can be done now)
+## 0. Simulator run — attempted 2026-09-03, BLOCKED
 
-Build and unit tests are already verified (see
-`.superpowers/sdd/2026-09-03-watch-extension/build-verification-report.md`).
-What's left before the watch arrives is exercising the page in the Zepp OS
-simulator against the mock relay.
+Do not spend time on this. It was set up and tried in full, and the
+simulator cannot host this extension.
 
-- [ ] **Result:** _______________
+What was verified and passed:
 
-Steps: see the "Simulator notes" section of `watch/README.md`
-(`npm run mock-relay` in one terminal, `zeus dev` in another, target the
-Cheetah 2 Ultra or closest available round 480 device). Pass looks like:
-VE climbing within 2 s, background cycling through the zone colours, the
-mock relay logging `session start`/`session stop`, and the page turning
-grey with `phone?` within 5 s of stopping the mock relay.
+- `zeus build` and `zeus preview` succeed; the build produces a `.zab`
+  and an installable QR code.
+- `zeus dev` connects to the simulator, builds for the Cheetah 2 Ultra
+  device sources and installs the package, which then binds to the
+  running emulator.
+- The bundler accepts `DataWidget(BasePage(...))` and the full
+  `runtime.ability.subType` list. The MessageBuilder fallback is not
+  needed.
+
+Why the page could not be rendered: this extension declares only
+`module.data-widget` and `module.app-side`, so it has no launcher entry
+by design and can only be opened inside the native Workout app. The
+available emulator images (Cheetah Pro and T-Rex 3 Pro, both 480x480
+round) contain only Settings in their app list — there is no Workout app
+to host it. Temporarily exposing the same page via `module.page`, and
+matching `apiVersion.target` to the emulator's API level, did not make it
+appear either.
+
+Setup notes if a future image ships the Workout app: the simulator needs
+Rosetta 2 on Apple Silicon, because the bundled `qemu-system-arm` is an
+x86_64 binary (`softwareupdate --install-rosetta`). Tunnelblick and the
+tun/tap extension are NOT required; the launch script uses QEMU user-mode
+networking. Emulator images cache to `~/.zepp/emulator_cache`.
+
+The two checks below therefore move to the first run on the real watch.
+Do them during item 5.
 
 Also confirm while the simulator is up:
 
