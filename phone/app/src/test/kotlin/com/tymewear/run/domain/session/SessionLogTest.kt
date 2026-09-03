@@ -32,4 +32,18 @@ class SessionLogTest {
         f.appendText("{\"type\":\"breath\",\"tMs\":5")
         assertEquals(listOf<SessionEvent>(SessionEvent.Start(1, "manual")), SessionLog.read(f))
     }
+
+    @Test
+    fun `reopening after a crash mid-line drops the partial line and keeps subsequent events`() {
+        val f = tmp.newFile("s.jsonl")
+        SessionLog(f).apply { append(SessionEvent.Start(1, "manual")); close() }
+        f.appendText("{\"type\":\"breath\",\"tMs\":5")
+        val log = SessionLog(f)
+        log.append(SessionEvent.Stop(2, "manual"))
+        log.close()
+        assertEquals(
+            listOf<SessionEvent>(SessionEvent.Start(1, "manual"), SessionEvent.Stop(2, "manual")),
+            SessionLog.read(f),
+        )
+    }
 }
