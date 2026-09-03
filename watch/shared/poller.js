@@ -9,7 +9,7 @@ export class Poller {
 
   get running() { return this.handle !== null }
 
-  async #run() {
+  async _run() {
     if (this.busy) return
     this.busy = true
     try { await this.tick() } catch (_) { /* keep polling */ } finally { this.busy = false }
@@ -17,8 +17,8 @@ export class Poller {
 
   start() {
     if (this.handle !== null) return
-    this.handle = this.timers.setInterval(() => { this.#run() }, this.intervalMs)
-    this.#run()
+    this.handle = this.timers.setInterval(() => { this._run() }, this.intervalMs)
+    this._run()
   }
 
   stop() {
