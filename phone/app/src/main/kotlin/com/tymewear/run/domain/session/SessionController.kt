@@ -108,7 +108,11 @@ class SessionController(
     fun recoverOnStartup(nowMs: Long) = synchronized(lock) {
         val activeId = id
         for (m in store.list()) {
-            if (m.endMs == null && m.id != activeId) store.finish(m.id, nowMs, "restart")
+            if (m.endMs == null && m.id != activeId) {
+                val lastEventMs = store.events(m.id).lastOrNull()?.tMs ?: m.startMs
+                val endMs = lastEventMs.coerceAtMost(nowMs)
+                store.finish(m.id, endMs, "restart")
+            }
         }
     }
 

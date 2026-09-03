@@ -53,8 +53,13 @@ class RecorderService : Service() {
         }
 
         if (relay == null) {
-            relay = RelayServer(Constants.RELAY_PORT, Graph.live, Graph.settings, Graph.sessions, version = BuildConfig.VERSION_NAME)
-                .also { it.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false) }
+            try {
+                relay = RelayServer(Constants.RELAY_PORT, Graph.live, Graph.settings, Graph.sessions, version = BuildConfig.VERSION_NAME)
+                    .also { it.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false) }
+            } catch (e: java.io.IOException) {
+                Timber.e(e, "relay failed to bind")
+                relay = null
+            }
         }
         if (settingsJob?.isActive != true) {
             settingsJob = scope.launch {
@@ -76,11 +81,21 @@ class RecorderService : Service() {
         while (scope.isActive) {
             val now = System.currentTimeMillis()
             Graph.sessions.tick(now)?.let { Timber.i("Fallback stop: $it") }
+            if (relay == null) {
+                try {
+                    relay = RelayServer(Constants.RELAY_PORT, Graph.live, Graph.settings, Graph.sessions, version = BuildConfig.VERSION_NAME)
+                        .also { it.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false) }
+                } catch (e: java.io.IOException) {
+                    Timber.e(e, "relay failed to bind")
+                    relay = null
+                }
+            }
             val status = Graph.live.status(now).wire
             val session = Graph.sessions.activeSessionId
             val text = buildString {
                 append("Strap ").append(status)
                 if (session != null) append(" · recording ").append(session)
+                if (relay == null) append(" · relay down")
             }
             (getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager)
                 .notify(Notifications.ID_SERVICE, Notifications.serviceNotification(this, text))
@@ -92,20 +107,28 @@ class RecorderService : Service() {
     }
 
     private suspend fun runSyncPass(now: Long) = withContext(Dispatchers.IO) {
-        val settings = Graph.settings.load()
-        val metas = Graph.sessionStore.list()
-        for (m in SyncScheduler.expired(metas, now)) {
-            Graph.sessionStore.updateMeta(m.id) { it.copy(syncState = "unmatched", syncMessage = "no Amazfit activity appeared within 6 hours") }
-            Notifications.unmatched(this@RecorderService, m.id)
-        }
-        val key = settings.intervalsApiKey ?: return@withContext
-        val engine = SyncEngine(IntervalsClient(key), Graph.sessionStore)
-        for (m in SyncScheduler.due(metas, now)) {
-            when (val out = engine.sync(m.id, settings, now)) {
-                is SyncOutcome.Synced -> Notifications.synced(this@RecorderService, m.id, out.activityId)
-                is SyncOutcome.Failed -> Notifications.syncFailed(this@RecorderService, m.id, out.message)
-                else -> {}
+        try {
+            val settings = Graph.settings.load()
+            val metas = Graph.sessionStore.list()
+            for (m in SyncScheduler.expired(metas, now)) {
+                Graph.sessionStore.updateMeta(m.id) { it.copy(syncState = "unmatched", syncMessage = "no Amazfit activity appeared within 6 hours") }
+                Notifications.unmatched(this@RecorderService, m.id)
             }
+            val key = settings.intervalsApiKey ?: return@withContext
+            val engine = SyncEngine(IntervalsClient(key), Graph.sessionStore)
+            for (m in SyncScheduler.due(metas, now)) {
+                try {
+                    when (val out = engine.sync(m.id, settings, now)) {
+                        is SyncOutcome.Synced -> Notifications.synced(this@RecorderService, m.id, out.activityId)
+                        is SyncOutcome.Failed -> Notifications.syncFailed(this@RecorderService, m.id, out.message)
+                        else -> {}
+                    }
+                } catch (e: Exception) {
+                    Timber.w(e, "sync pass failed")
+                }
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "sync pass failed")
         }
     }
 

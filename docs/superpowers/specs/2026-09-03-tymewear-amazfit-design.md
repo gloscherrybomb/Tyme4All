@@ -87,7 +87,7 @@ Relay endpoints:
 
 | Method, path | Purpose | Response |
 |---|---|---|
-| `GET /live` | Latest values | `{ ve, br, tv, zone, veSmoothed15s, batteryPct, status, thresholds: {vt1, vt2, topZ4, vo2max}, sessionId, updatedAtMs }` |
+| `GET /live` | Latest values | `{ ve, br, tv, ie, zone, batteryPct, status, thresholds: {vt1, vt2, topZ4, vo2max}, reserve: {...}, sessionId, updatedAtMs }` |
 | `POST /session/start` | Watch started a run | `{ sessionId }`; idempotent if a session is already open |
 | `POST /session/stop` | Watch ended a run | `{ sessionId }`; no-op if none is open |
 | `GET /health` | Liveness for the side service | `{ ok: true, version }` |

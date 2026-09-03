@@ -9,4 +9,4 @@ Tymewear VitalPro breathing data on an Amazfit Cheetah 2 Ultra, recorded on the 
 
 ## Design
 
-See `docs/superpowers/specs/` for the full design, including [`2026-09-03-tymewear-amazfit-design.md`](docs/superpowers/specs/2026-09-03-tymewear-amazfit-design.md), and `.superpowers/sdd/2026-09-03-phone-app/` for the phone app's implementation plan.
+See `docs/superpowers/specs/` for the full design, including [`2026-09-03-tymewear-amazfit-design.md`](docs/superpowers/specs/2026-09-03-tymewear-amazfit-design.md), and [`docs/superpowers/plans/2026-09-03-phone-app.md`](docs/superpowers/plans/2026-09-03-phone-app.md) for the phone app's implementation plan (the watch extension's plan is at [`docs/superpowers/plans/2026-09-03-watch-extension.md`](docs/superpowers/plans/2026-09-03-watch-extension.md)).

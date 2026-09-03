@@ -16,7 +16,7 @@ class IntervalsClientTest {
     private lateinit var api: IntervalsClient
 
     @Before fun up() { server.start(); api = IntervalsClient("k3y", server.url("/").toString().trimEnd('/')) }
-    @After fun down() = server.shutdown()
+    @After fun down() { try { server.shutdown() } catch (e: Exception) { /* already shut down by a test */ } }
 
     @Test
     fun `lists activities with basic auth and utc window`() {
@@ -74,6 +74,14 @@ class IntervalsClientTest {
         assertEquals("/api/v1/athlete/0", server.takeRequest().path)
         server.enqueue(MockResponse().setResponseCode(401))
         assertEquals(false, api.verifyKey())
+    }
+
+    @Test
+    fun `verify key returns false when the server is unreachable`() {
+        val url = server.url("/").toString().trimEnd('/')
+        server.shutdown()
+        val offlineApi = IntervalsClient("k3y", url)
+        assertEquals(false, offlineApi.verifyKey())
     }
 
     @Test

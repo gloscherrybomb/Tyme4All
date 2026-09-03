@@ -68,13 +68,24 @@ class SessionControllerTest {
     }
 
     @Test
-    fun `startup recovery closes an unfinished session`() {
+    fun `startup recovery closes an unfinished session at its last event`() {
+        val store = SessionStore(tmp.root)
+        val log = store.create(1_000, "watch")
+        log.append(SessionEvent.Breath(5_000, d.breathRate, d.tidalVolume, d.ieRatio, d.tvRaw, d.inhaleDurationCs, d.exhaleDurationCs, d.timestamp40ms))
+        log.close()
+        val c = SessionController(store)
+        c.recoverOnStartup(nowMs = 9_000)
+        assertEquals(5_000L, store.meta(SessionStore.idFor(1_000))!!.endMs)
+        assertEquals("restart", (store.events(SessionStore.idFor(1_000)).last() as SessionEvent.Stop).reason)
+    }
+
+    @Test
+    fun `startup recovery of a log with only a start ends at the start time`() {
         val store = SessionStore(tmp.root)
         store.create(1_000, "watch").close()
         val c = SessionController(store)
         c.recoverOnStartup(nowMs = 9_000)
-        assertEquals(9_000L, store.meta(SessionStore.idFor(1_000))!!.endMs)
-        assertEquals("restart", (store.events(SessionStore.idFor(1_000)).last() as SessionEvent.Stop).reason)
+        assertEquals(1_000L, store.meta(SessionStore.idFor(1_000))!!.endMs)
     }
 
     @Test
@@ -98,7 +109,8 @@ class SessionControllerTest {
 
         assertEquals(activeId, c.activeSessionId)
         assertNull(store.meta(activeId)!!.endMs)
-        assertEquals(9_000_000L, store.meta(otherId)!!.endMs)
+        // otherId's log has only a Start, so recovery ends it at its start time, not now.
+        assertEquals(500_000L, store.meta(otherId)!!.endMs)
         assertEquals("restart", (store.events(otherId).last() as SessionEvent.Stop).reason)
     }
 

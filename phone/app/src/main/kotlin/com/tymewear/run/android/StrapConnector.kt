@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 
 /** Keeps the strap connected whenever it is in range, feeding LiveState and the session log. */
@@ -33,9 +34,17 @@ class StrapConnector(
     fun start() {
         if (job?.isActive == true) return
         job = scope.launch {
+            var backoffMs = 5_000L
             while (isActive) {
                 try {
-                    val found = ble.scan(settings.load().sensorId).first()
+                    val found = withTimeoutOrNull(30_000) { ble.scan(settings.load().sensorId).first() }
+                    if (found == null) {
+                        Timber.d("Strap scan timed out; retrying in ${backoffMs}ms")
+                        delay(backoffMs)
+                        backoffMs = (backoffMs * 2).coerceAtMost(60_000L)
+                        continue
+                    }
+                    backoffMs = 5_000L
                     _deviceName.value = found.name
                     Timber.i("Strap found: ${found.name} ${found.address}")
                     ble.connect(found.address)

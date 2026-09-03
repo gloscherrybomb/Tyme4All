@@ -20,8 +20,11 @@ class SyncEngineTest {
         var lastPut: List<Stream>? = null
         var lastPutId: String? = null
         var fail: IntervalsException? = null
-        override fun listActivities(oldest: Instant, newest: Instant) = fail?.let { throw it } ?: activities
-        override fun getStreams(activityId: String, types: List<String>) = streams
+        var failListActivities: Exception? = null
+        var failGetStreams: Exception? = null
+        override fun listActivities(oldest: Instant, newest: Instant) =
+            fail?.let { throw it } ?: failListActivities?.let { throw it } ?: activities
+        override fun getStreams(activityId: String, types: List<String>) = failGetStreams?.let { throw it } ?: streams
         override fun putStreams(activityId: String, streams: List<Stream>): UpdateStreamsResult { lastPutId = activityId; lastPut = streams; return putResult }
         override fun verifyKey() = true
     }
@@ -92,6 +95,25 @@ class SyncEngineTest {
     @Test fun `short sessions are skipped`() {
         val store = SessionStore(tmp.root); val id = session(store, lengthMs = 30_000)
         assertEquals(SyncOutcome.Skipped("session shorter than 60 s"), SyncEngine(FakeApi(), store).sync(id, settings, startMs + 700_000))
+    }
+
+    @Test fun `unexpected exception becomes failed and does not propagate`() {
+        val store = SessionStore(tmp.root); val id = session(store)
+        val api = FakeApi().apply {
+            activities = listOf(ActivitySummary("i1", Instant.ofEpochMilli(startMs + 3_000), "Run", "Run", "ZEPP", "Amazfit Cheetah 2 Ultra"))
+            failGetStreams = IllegalStateException("bad json")
+        }
+        val out = SyncEngine(api, store).sync(id, settings, startMs + 700_000)
+        assertEquals(SyncOutcome.Failed("bad json"), out)
+        assertEquals("failed", store.meta(id)!!.syncState)
+    }
+
+    @Test fun `offline io exception leaves session pending for the next attempt`() {
+        val store = SessionStore(tmp.root); val id = session(store)
+        val api = FakeApi().apply { failListActivities = java.io.IOException("offline") }
+        val out = SyncEngine(api, store).sync(id, settings, startMs + 700_000)
+        assertEquals(SyncOutcome.NotYet, out)
+        assertEquals("pending", store.meta(id)!!.syncState)
     }
 
     @Test fun `manual match skips the matcher`() {

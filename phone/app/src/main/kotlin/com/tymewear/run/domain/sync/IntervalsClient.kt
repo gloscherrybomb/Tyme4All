@@ -92,6 +92,8 @@ class IntervalsClient(
         true
     } catch (e: IntervalsException) {
         false
+    } catch (e: java.io.IOException) {
+        false
     }
 
     private fun get(path: String): String =

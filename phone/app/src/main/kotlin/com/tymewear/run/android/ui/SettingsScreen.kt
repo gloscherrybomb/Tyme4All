@@ -109,9 +109,14 @@ fun SettingsScreen() {
                     keyTesting = true
                     keyTestResult = null
                     scope.launch {
-                        val ok = withContext(Dispatchers.IO) { IntervalsClient(apiKey).verifyKey() }
-                        keyTestResult = if (ok) "Key OK" else "Key rejected"
-                        keyTesting = false
+                        try {
+                            val ok = withContext(Dispatchers.IO) { IntervalsClient(apiKey).verifyKey() }
+                            keyTestResult = if (ok) "Key OK" else "Key rejected"
+                        } catch (e: Exception) {
+                            keyTestResult = "Test failed: ${e.message}"
+                        } finally {
+                            keyTesting = false
+                        }
                     }
                 },
             ) { Text("Test") }

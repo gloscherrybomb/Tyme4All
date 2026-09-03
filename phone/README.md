@@ -50,6 +50,8 @@ Do this once, on the Status and Settings tabs.
    The Settings tab has a **Copy codes** button that copies this list to the clipboard so you can paste codes in as you go.
 6. **Link Zepp to Intervals.icu.** In the Zepp app: Profile → third-party account linking, and connect Intervals.icu. This is what gets your Amazfit runs onto Intervals.icu in the first place.
 
+The service is not started on boot; after a phone reboot, open the app once to start it again.
+
 ## Sessions
 
 A session normally starts and stops automatically, driven by the watch extension through the phone's relay (`POST /session/start` and `POST /session/stop` on `127.0.0.1:41415`). If no stop signal arrives, the phone closes the session itself after the strap has been disconnected for 10 minutes, or after 8 hours, whichever comes first.

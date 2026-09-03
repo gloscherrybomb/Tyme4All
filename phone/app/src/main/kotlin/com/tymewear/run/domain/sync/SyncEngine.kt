@@ -18,7 +18,10 @@ class SyncEngine(private val api: IntervalsApi, private val store: SessionStore)
     fun sync(sessionId: String, settings: Settings, nowMs: Long): SyncOutcome = run(sessionId, settings, nowMs) { meta ->
         val start = Instant.ofEpochMilli(meta.startMs)
         val end = Instant.ofEpochMilli(meta.endMs!!)
-        val candidates = api.listActivities(start.minusSeconds(7_200), end.plusSeconds(7_200))
+        // Intervals.icu interprets oldest/newest in the athlete's local zone, not UTC, so a
+        // narrow UTC-based window can clip an activity near a zone boundary. Widen it to match
+        // syncTo's ±24 h window; the real selection happens in ActivityMatcher's ±5 minute check.
+        val candidates = api.listActivities(start.minusSeconds(86_400), end.plusSeconds(86_400))
         ActivityMatcher.pick(candidates, meta.startMs)
     }
 
@@ -58,6 +61,9 @@ class SyncEngine(private val api: IntervalsApi, private val store: SessionStore)
             record("failed", e.message ?: "intervals error"); SyncOutcome.Failed(e.message ?: "intervals error")
         } catch (e: java.io.IOException) {
             record("pending", "network: ${e.message}"); SyncOutcome.NotYet
+        } catch (e: Exception) {
+            val msg = e.message ?: e::class.simpleName ?: "unknown error"
+            record("failed", msg); SyncOutcome.Failed(msg)
         }
     }
 }
