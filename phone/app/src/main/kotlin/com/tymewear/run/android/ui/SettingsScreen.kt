@@ -135,7 +135,7 @@ fun SettingsScreen() {
 
         Text("LAN overlay")
         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-            Text("Serve live values on Wi-Fi for the PC overlay")
+            Text("Serve live values on Wi-Fi for the PC overlay", modifier = Modifier.weight(1f))
             Switch(checked = lanOverlay, onCheckedChange = {
                 lanOverlay = it
                 if (it && lanToken == null) lanToken = LanToken.generate()

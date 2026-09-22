@@ -39,6 +39,10 @@ class LanRelayManager(
     fun stop() {
         callback?.let { try { cm.unregisterNetworkCallback(it) } catch (e: Exception) { Timber.w(e, "unregister failed") } }
         callback = null
+        // Also drop the token: unregister cannot cancel a callback already executing, and a
+        // rebind() that was waiting on the monitor would otherwise see token != null and
+        // boundHost == null and start a fresh server with nothing left to stop it.
+        token = null
         stopServer()
     }
 
