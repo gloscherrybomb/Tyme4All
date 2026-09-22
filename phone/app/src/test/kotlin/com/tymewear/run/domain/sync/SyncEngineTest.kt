@@ -141,4 +141,27 @@ class SyncEngineTest {
         assertEquals("pushed 7 streams to tpv; also overlapped amaz (Amazfit Cheetah 2 Ultra)", store.meta(id)!!.syncMessage)
         assertEquals("Ride", (out as SyncOutcome.Synced).activityLabel)
     }
+
+    @Test fun `a second session for an already synced activity carries the first session's data too`() {
+        val store = SessionStore(tmp.root)
+        val a = session(store, lengthMs = 320_000)                       // breath at +5 s, VE 40
+        val bStart = startMs + 330_000
+        store.create(bStart, "strap").apply {
+            append(SessionEvent.Breath(startMs + 340_000, 20.0, 3.0, 1.0, 300, 100, 100, 1)); close()   // VE 60
+        }
+        val b = SessionStore.idFor(bStart)
+        store.finish(b, startMs + 700_000, "idle")
+
+        val api = FakeApi().apply {
+            activities = listOf(ActivitySummary("i1", Instant.ofEpochMilli(startMs), "Ride", "Ride", "TPV", null, 900))
+            streams = listOf(Stream("time", listOf(0.0, 5.0, 340.0, 800.0)))
+        }
+        val engine = SyncEngine(api, store)
+        assertTrue(engine.sync(a, settings, startMs + 1_000_000) is SyncOutcome.Synced)
+        assertEquals(listOf(null, 40.0, null, null), api.lastPut!!.first { it.type == StreamCodes.VE }.data)
+
+        assertTrue(engine.sync(b, settings, startMs + 1_000_000) is SyncOutcome.Synced)
+        assertEquals(listOf(null, 40.0, 60.0, null), api.lastPut!!.first { it.type == StreamCodes.VE }.data)
+        assertEquals("i1", store.meta(b)!!.activityId)
+    }
 }
