@@ -122,7 +122,8 @@ from the Status tab) reverts to the previous always-on behaviour.
 ## PC overlay (TrainingPeaks Virtual)
 
 Settings tab: turn on **LAN overlay** and save. The Status tab then shows an overlay URL and QR
-code while the phone is on Wi-Fi. That URL serves the live values (token-protected, read-only,
+code while the phone is on Wi-Fi and the strap service is running (strap connected, or the app
+open with the strap in range). That URL serves the live values (token-protected, read-only,
 no session control) to anything on the same network: the Windows script in `../pc/`, or a
 browser on a tablet. **Regenerate token** on the Settings tab invalidates the old URL.
 

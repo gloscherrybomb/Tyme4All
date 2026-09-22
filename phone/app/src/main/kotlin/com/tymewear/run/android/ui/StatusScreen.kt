@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.tymewear.run.android.Graph
+import com.tymewear.run.domain.StrapStatus
 import com.tymewear.run.domain.LivePayload
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.LaunchedEffect
@@ -114,9 +115,12 @@ fun StatusScreen(
 
         Text("PC overlay")
         val lanUrl by Graph.lanOverlayUrl.collectAsState()
+        val recorderRunning by Graph.recorderRunning.collectAsState()
         val lanEnabled = Graph.settings.load().lanOverlayEnabled
         when {
             !lanEnabled -> Text("Off. Turn on \"LAN overlay\" on the Settings tab.")
+            lanUrl == null && (!recorderRunning || Graph.live.status(System.currentTimeMillis()) == StrapStatus.OFF) ->
+                Text("The strap service is not running. Put the strap on, or open the app with it in range, and the URL appears here.")
             lanUrl == null -> Text("Waiting for Wi-Fi. The URL appears once the phone has a Wi-Fi address.")
             else -> {
                 Text(lanUrl!!)

@@ -47,6 +47,7 @@ class RecorderService : Service() {
     override fun onCreate() {
         super.onCreate()
         Graph.init(this)
+        Graph.recorderRunning.value = true
         Notifications.ensureChannels(this)
         Graph.sessions.recoverOnStartup(System.currentTimeMillis())
         connector = StrapConnector(this, Graph.live, Graph.sessions, Graph.settings, scope)
@@ -191,6 +192,7 @@ class RecorderService : Service() {
         relay?.stop(); relay = null
         Notifications.clearRecording(this)
         scope.cancel()
+        Graph.recorderRunning.value = false
         super.onDestroy()
     }
 

@@ -8,7 +8,8 @@ Intervals.icu merge happen on the phone; see `../phone/README.md`.
 
 1. On the phone, Settings tab: turn on **LAN overlay**, tap **Save**.
 2. Phone on the same Wi-Fi as the PC. Status tab, "PC overlay": tap Copy URL and send it to the PC
-   (the QR code is for opening the same page on a tablet or another phone).
+   (the QR code is for opening the same page on a tablet or another phone). The URL appears
+   while the strap service is running: strap connected, or the app open with the strap in range.
 3. Copy `overlay.ps1` and `overlay.cmd` anywhere on the PC.
 4. Double-click `overlay.cmd`. Paste the URL when asked. The panel appears top-right.
 5. In TPV, set the display mode to **borderless windowed** (or windowed), not exclusive

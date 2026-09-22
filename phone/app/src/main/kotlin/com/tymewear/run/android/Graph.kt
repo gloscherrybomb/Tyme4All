@@ -28,6 +28,10 @@ object Graph {
     @Volatile
     var observingCount: Int = 0
 
+    /** True between RecorderService.onCreate and onDestroy, so the UI can tell "service not
+     *  running" apart from "running but no Wi-Fi address yet". */
+    val recorderRunning = kotlinx.coroutines.flow.MutableStateFlow(false)
+
     /** Overlay URL of the LAN relay while it is bound, else null. Written by LanRelayManager. */
     val lanOverlayUrl = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
 
