@@ -151,12 +151,34 @@ TPV must run **borderless windowed** or windowed, not exclusive fullscreen, for 
 
 Everything else unchanged.
 
+## 8a. Notifications (phone)
+
+Starting is now automatic, so the runner needs a visible confirmation that recording is happening before the ride begins.
+
+| Notification | Channel | When | Text |
+|---|---|---|---|
+| Recording | `kbreathe_sync` (default importance), ongoing, not dismissable | session opens; removed when it closes | "Recording breathing data", body "Since 18:42, VE 34 L/min", refreshed at most every 30 s |
+| Synced | `kbreathe_sync` | push succeeded | "Breathing data synced to Intervals.icu", body names the activity (name, or type and start time); tap opens it |
+| Failed | `kbreathe_sync` | push failed | unchanged |
+| Unmatched | `kbreathe_sync` | 6 hours without a match, session at least 15 minutes long | "No Intervals.icu activity found for a breathing session", body "Open K-Breathe Run to match it by hand" |
+
+The persistent "K-Breathe Run" service notification (minimum importance) stays as it is; it reports strap connection, not recording.
+
+## 8b. Wake-up expectations and first-run checks (phone)
+
+Target phone: Nothing Phone (Android 15 or newer, near-stock). Companion Device Manager presence observation is available and, once the strap is paired from the Status tab, should wake the app when the strap comes into range even if the app was swiped away or the phone was rebooted. Presence detection takes 10 to 60 seconds, so the strap should go on a couple of minutes before the ride. None of this has run on hardware yet. Add to the phone's first-run checklist:
+
+1. Pair the strap, swipe the app away, power the strap on: the Recording notification appears within two minutes without opening the app.
+2. Reboot the phone, do not open the app, power the strap on: same result.
+3. Take the strap off: the Recording notification disappears about three minutes later and the session shows on the Sessions tab.
+4. Exclude the app from battery optimisation before either test if it fails, and record whether that made the difference.
+
 ## 9. Error handling
 
 | Situation | Behaviour |
 |---|---|
 | Strap dropout longer than the idle timeout mid-ride | Two sessions; both match the same activity by overlap. Each push sends full-length arrays with `null` outside its own session, so a naive second push would blank the first. `SyncEngine` therefore merges: before pushing, if other sessions already target the same activity id, their events are included in the alignment so the pushed arrays carry every session. |
-| Strap worn without any activity | Session becomes `unmatched` after 6 hours, then pruned. No notification for unmatched strap-driven sessions shorter than 15 minutes, to avoid noise from fitting the strap. Longer ones notify as today. |
+| Strap worn without any activity | Session becomes `unmatched` after 6 hours, then pruned. Sessions shorter than 15 minutes do not notify (section 8a), to avoid noise from fitting the strap. |
 | Wi-Fi address changes mid-ride | LAN listener rebinds; the overlay's URL is stale. The overlay shows `phone?`; the runner re-copies the URL. Accepted for the first version. |
 | Token leaked on the home network | Reader sees breathing values only. Regenerate from the Status tab. |
 | Overlay hidden by exclusive fullscreen TPV | Section 7.3 fallback. |
@@ -170,6 +192,7 @@ The merge-on-second-push rule in the first row is the one non-obvious piece of l
 - `SessionController`: opens on first breath when idle; does not reopen while open; closes after idle timeout; closes at 8 hour cap; watch and manual start/stop remain no-ops or closes as specified; a session stopped by the button reopens on the next breath.
 - `ActivityMatcher`: activity fully inside session; session fully inside activity; partial overlap each side; below minimum overlap; Strava excluded; two candidates with different overlap; tie on overlap; missing `elapsed_time`.
 - `SyncEngine`: second session for an already-synced activity merges the earlier series into the pushed arrays; `syncMessage` names a runner-up activity.
+- Notification decisions (pure function): recording notification shown while a session is open; unmatched suppressed under 15 minutes.
 - `RelayServer`: loopback serves without token; LAN listener rejects missing and wrong token with 401; LAN listener returns 404 for `POST /session/*`; `GET /overlay` returns HTML.
 - `IntervalsClient`: parses `elapsed_time` from the recorded activity list fixture.
 
