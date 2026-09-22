@@ -26,7 +26,7 @@ Established 2026-09-22.
 | Intervals.icu refuses stream edits on Strava-sourced activities. | The Strava exclusion in the matcher stays. |
 | TPV on Windows saves FIT files to `C:\Users\<you>\TPVirtual\<USERID>\FitFiles` at ride end. | Not used by this design; recorded as the hook for a future PC-side recorder. |
 | The Tymewear stream codes (`TymeVentilation` etc.) already match the Karoo app's developer field names, and Karoo rides show in the Tymewear dashboard via its Intervals.icu integration. | No change to codes. TPV rides and Amazfit runs share the Karoo charts. |
-| The VitalPro accepts one BLE central at a time. | Phone records; the PC never connects to the strap. |
+| The VitalPro accepts one BLE central at a time. | Phone records; the PC never connects to the strap. Before a Karoo ride the runner turns the phone service off (existing **Service enabled** switch) so the Karoo gets the strap; documented in the phone README. |
 | The phone app never sees live heart rate. | No live mobilization index (MI) on the overlay. MI still arrives in Intervals.icu at sync. |
 
 ## 3. Architecture
@@ -82,6 +82,7 @@ overlap      = max(0, min(ends) - max(starts))
 ```
 
 - Exclude activities with `source == "STRAVA"` (case-insensitive), as today.
+- Exclude activities whose `device_name` contains "Karoo" (case-insensitive). The Karoo's K-Breathe extension records the same `Tyme*` fields into its FIT, so a phone push would replace a complete recording with a partial one.
 - Exclude activities with `overlap < MIN_OVERLAP_MS` (5 minutes).
 - Pick the largest overlap. Ties (equal to the millisecond) resolve to the earliest start.
 - The Amazfit preference is removed. TPV rides, Karoo rides and Amazfit runs are all valid targets.

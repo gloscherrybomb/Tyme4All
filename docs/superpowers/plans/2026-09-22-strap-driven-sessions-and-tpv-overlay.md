@@ -14,7 +14,7 @@
 
 - Package `com.tymewear.run`; pure logic in `domain/`, Android shells in `android/`; every pure unit gets a JVM JUnit 4 test under `phone/app/src/test`. No Robolectric.
 - Idle stop timeout default **3 minutes** (`idleStopMinutes`); session cap **8 hours**; sessions under **60 s** are `skipped`.
-- Minimum overlap for an automatic match **5 minutes** (`Constants.MIN_OVERLAP_MS`). Strava-sourced activities are never matched. No Amazfit preference.
+- Minimum overlap for an automatic match **5 minutes** (`Constants.MIN_OVERLAP_MS`). Strava-sourced activities and activities whose `device_name` contains "Karoo" are never matched (the Karoo records the Tyme* fields itself). No Amazfit preference.
 - Relay port **41415** on both loopback (no auth) and the Wi-Fi IPv4 address (token required). The LAN listener never serves `POST /session/*`.
 - Token: 16 random bytes, base64url without padding (22 characters).
 - Stream codes unchanged: `TymeVentilation`, `TymeBreathRate`, `TymeTidalVolume`, `TymeIERatio`, `TymeVeZone`, `TymeBreathReserve`, `TymeMobilizationIndex`.
@@ -523,6 +523,10 @@ class ActivityMatcherTest {
         assertNull(ActivityMatcher.pick(listOf(a("s", 0, 3_600, source = "strava")), sessionStart, sessionEnd))
     }
 
+    @Test fun `karoo recordings are never picked because the karoo records breathing itself`() {
+        assertNull(ActivityMatcher.pick(listOf(a("k", 0, 3_600, source = "UPLOAD", device = "Hammerhead Karoo 3")), sessionStart, sessionEnd))
+    }
+
     @Test fun `activity entirely outside the session has zero overlap`() {
         assertNull(ActivityMatcher.pick(listOf(a("gone", 7_200, 3_600)), sessionStart, sessionEnd))
     }
@@ -609,6 +613,9 @@ object ActivityMatcher {
     ): List<Ranked> =
         candidates
             .filter { it.source?.equals("STRAVA", ignoreCase = true) != true }
+            // The Karoo records the same Tyme* fields itself; pushing phone data over them would
+            // replace a complete recording with a partial one.
+            .filter { it.deviceName?.contains("karoo", ignoreCase = true) != true }
             .map { Ranked(it, overlapMs(it, sessionStartMs, sessionEndMs)) }
             .filter { it.overlapMs >= minOverlapMs }
             .sortedWith(compareByDescending<Ranked> { it.overlapMs }.thenBy { it.activity.startDate })
@@ -1890,8 +1897,14 @@ for 90 days, then pruned.
 Because starting is automatic, put the strap on a couple of minutes before the activity: presence
 detection and the strap connection take up to a minute, and the session must overlap the activity
 by at least 5 minutes to match.
+
+**Karoo rides.** The strap accepts one Bluetooth connection, and the Karoo's own K-Breathe extension
+records the same breathing fields into its FIT file. Before a Karoo ride, turn **Service enabled**
+off on the Settings tab so the phone leaves the strap to the Karoo; turn it back on afterwards.
+If the phone does take the strap during a Karoo ride, the sync never pushes to a Karoo activity,
+so the Karoo's own recording is never overwritten.
 ```
-4. "Intervals.icu sync" section: replace "looking for an activity that starts within 5 minutes of the session" with "looking for the activity whose time span overlaps the session the most, with at least 5 minutes of overlap. Strava imports are skipped because Intervals.icu does not allow editing them." Add after the bullet list: "If two activities overlap the same session (for example a watch recording and a TPV recording of the same ride), the larger overlap gets the data and the other is named in the session's message; use **Match by id** to push to it as well. If the strap dropped out for more than 3 minutes mid-activity you get two sessions; both match the same activity and the second push carries the first session's data too, nothing is blanked."
+4. "Intervals.icu sync" section: replace "looking for an activity that starts within 5 minutes of the session" with "looking for the activity whose time span overlaps the session the most, with at least 5 minutes of overlap. Strava imports are skipped because Intervals.icu does not allow editing them, and Karoo activities are skipped because the Karoo records breathing itself." Add after the bullet list: "If two activities overlap the same session (for example a watch recording and a TPV recording of the same ride), the larger overlap gets the data and the other is named in the session's message; use **Match by id** to push to it as well. If the strap dropped out for more than 3 minutes mid-activity you get two sessions; both match the same activity and the second push carries the first session's data too, nothing is blanked."
 5. Notifications table: replace with
 
 | Notification | Meaning |
