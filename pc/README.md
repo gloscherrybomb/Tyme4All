@@ -1,7 +1,8 @@
 # Tyme4All PC overlay
 
 A small always-on-top panel for Windows that shows live breathing values from the Tyme4All
-phone app while you ride in TrainingPeaks Virtual (TPV). It is display only. Recording and the
+phone app while you use indoor training software: TrainingPeaks Virtual, Zwift, MyWhoosh, Rouvy
+or anything else that runs in a window. It is display only. Recording and the
 Intervals.icu merge happen on the phone; see `../phone/README.md`.
 
 ## Setup (once)
@@ -12,8 +13,8 @@ Intervals.icu merge happen on the phone; see `../phone/README.md`.
    while the strap service is running: strap connected, or the app open with the strap in range.
 3. Copy `overlay.ps1` and `overlay.cmd` anywhere on the PC.
 4. Double-click `overlay.cmd`. Paste the URL when asked. The panel appears top-right.
-5. In TPV, set the display mode to **borderless windowed** (or windowed), not exclusive
-   fullscreen. Exclusive fullscreen hides every other window, including this one.
+5. In your training app, set the display mode to **borderless windowed** (or windowed), not
+   exclusive fullscreen. Exclusive fullscreen hides every other window, including this one.
 
 The URL is kept in `%APPDATA%\Tyme4All\overlay.json` together with the panel position (`hasPos`, `x`, `y`;
 the panel opens top-right until it has been closed once) and opacity.
@@ -47,4 +48,4 @@ trainer. The page is served by the phone and needs nothing installed.
 3. Turn the phone's Wi-Fi off: the dot turns red with `phone?`, and after five seconds the panel
    greys out. Turn Wi-Fi back on: values return without restarting the script.
 4. Drag the panel, set opacity 50 %, quit, start again: position and opacity are restored.
-5. Start TPV in borderless windowed mode: the panel stays on top of TPV.
+5. Start your training app in borderless windowed mode: the panel stays on top of it.

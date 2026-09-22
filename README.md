@@ -22,8 +22,19 @@ The stream codes are the same ones K-Breathe writes on the Karoo, so Intervals.i
 | Folder | What it is | Status |
 |---|---|---|
 | [`phone/`](phone/README.md) | Android app. Connects to the strap, records, and syncs to Intervals.icu. | Working. Tested end to end on a Nothing phone with Android 16. |
-| [`pc/`](pc/README.md) | A small always-on-top window for Windows that shows live breathing values over TrainingPeaks Virtual, fed by the phone over Wi-Fi. | Written, not yet run on Windows. |
+| [`pc/`](pc/README.md) | A small always-on-top window for Windows that shows live breathing values on top of indoor training software, fed by the phone over Wi-Fi. | Written, not yet run on Windows. |
 | [`watch/`](watch/README.md) | A data page for the Amazfit Cheetah 2 Ultra that shows live breathing values during a run. | Experimental. Not yet run on a real watch. |
+
+## Seeing your breathing live
+
+The phone can also share the live numbers over your Wi-Fi, so you can watch them while you train. Turn on **LAN overlay** on the Settings tab. The Status tab then shows a web address and a QR code.
+
+- **Any screen with a browser.** Scan the QR code with a tablet, a second phone or a laptop, or type the address in. You get a full-screen page with VE, breathing rate, tidal volume and your current zone, with the background in the zone colour. It updates every second and needs nothing installed. Prop a tablet on the handlebars or open it on a second monitor.
+- **On top of indoor training software.** On Windows, [`pc/overlay.cmd`](pc/README.md) opens the same numbers in a small window that stays on top of everything else. It works over TrainingPeaks Virtual, Zwift, MyWhoosh, Rouvy or anything else, as long as the app runs in windowed or borderless windowed mode rather than exclusive fullscreen.
+
+Both are display only. Recording and the Intervals.icu sync keep running on the phone whether or not anything is watching. The address includes a private token, so only devices you give it to can read it, and nothing on the network can start or stop a recording. The phone has to be on the same Wi-Fi as the screen showing the numbers.
+
+The browser page has been tested. The Windows window has not yet been run on Windows.
 
 ## What you need
 
@@ -46,7 +57,7 @@ Set your own ventilation thresholds on the Settings tab before you trust the zon
 - **The strap takes one connection at a time.** Before a ride where the Karoo should record the strap, turn **Service enabled** off in the app. Tyme4All never pushes to a Karoo activity, so a Karoo recording is never overwritten.
 - **Put the strap on a few minutes early.** Android can take a couple of minutes to notice the strap, and the session has to overlap the activity by at least five minutes to be matched.
 - **The phone keeps running after the session** until the activity has been found, for up to six hours. If you only tried the strap on, tap **Discard, no activity coming** on the notification.
-- **Nothing leaves your phone except the push to Intervals.icu.** The Wi-Fi overlay is off by default. When on, it needs a token and cannot start or stop recording.
+- **Nothing leaves your phone except the push to Intervals.icu.** The live Wi-Fi view is off by default, and when on it stays on your local network.
 
 ## Building from source
 
