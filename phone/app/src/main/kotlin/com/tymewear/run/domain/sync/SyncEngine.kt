@@ -57,8 +57,10 @@ class SyncEngine(private val api: IntervalsApi, private val store: SessionStore)
             if (time.isNullOrEmpty()) { record("failed", "activity has no time stream", activity.id); return SyncOutcome.Failed("activity has no time stream") }
             val hr = streams.firstOrNull { it.type == "heartrate" }?.data
             // Other sessions already pushed to this activity must ride along, or this push's
-            // nulls outside its own span would blank them.
-            val others = store.list().filter { it.id != sessionId && it.activityId == activity.id && it.syncState == "synced" && it.endMs != null }
+            // nulls outside its own span would blank them. Any finished sibling that targets
+            // this activity counts, whatever its current state: a later failed retry does not
+            // remove the data its earlier push put on the activity.
+            val others = store.list().filter { it.id != sessionId && it.activityId == activity.id && it.endMs != null }
             val allSeries = (listOf(meta) + others).map { SeriesBuilder.build(store.events(it.id), settings.thresholds) }
             val aligned = StreamAligner.align(time, hr, activity.startDate, allSeries, settings.reserve)
             val result = api.putStreams(activity.id, aligned)

@@ -177,4 +177,44 @@ class SyncEngineTest {
         assertEquals(listOf(null, 40.0, 60.0, null), api.lastPut!!.first { it.type == StreamCodes.VE }.data)
         assertEquals("i1", store.meta(b)!!.activityId)
     }
+
+    /** Two sessions, A then B, that both overlap activity i1. Returns (a, b). */
+    private fun twoSessions(store: SessionStore): Pair<String, String> {
+        val a = session(store, lengthMs = 320_000)                       // breath at +5 s, VE 40
+        val bStart = startMs + 330_000
+        store.create(bStart, "strap").apply {
+            append(SessionEvent.Breath(startMs + 340_000, 20.0, 3.0, 1.0, 300, 100, 100, 1)); close()   // VE 60
+        }
+        val b = SessionStore.idFor(bStart)
+        store.finish(b, startMs + 700_000, "idle")
+        return a to b
+    }
+
+    @Test fun `merge keeps a sibling whose later re-sync failed`() {
+        val store = SessionStore(tmp.root)
+        val (a, b) = twoSessions(store)
+        val api = FakeApi().apply {
+            activities = listOf(ActivitySummary("i1", Instant.ofEpochMilli(startMs), "Ride", "Ride", "TPV", null, 900))
+            streams = listOf(Stream("time", listOf(0.0, 5.0, 340.0, 800.0)))
+        }
+        val engine = SyncEngine(api, store)
+        assertTrue(engine.sync(a, settings, startMs + 1_000_000) is SyncOutcome.Synced)
+        // A's data is on the activity; a later retry of A failed but it still targets i1.
+        store.updateMeta(a) { it.copy(syncState = "failed", syncMessage = "HTTP 500") }
+
+        assertTrue(engine.sync(b, settings, startMs + 1_000_000) is SyncOutcome.Synced)
+        assertEquals(listOf(null, 40.0, 60.0, null), api.lastPut!!.first { it.type == StreamCodes.VE }.data)
+    }
+
+    @Test fun `merge ignores a sibling session synced to a different activity`() {
+        val store = SessionStore(tmp.root)
+        val (a, b) = twoSessions(store)
+        store.updateMeta(a) { it.copy(syncState = "synced", activityId = "other") }
+        val api = FakeApi().apply {
+            activities = listOf(ActivitySummary("i1", Instant.ofEpochMilli(startMs), "Ride", "Ride", "TPV", null, 900))
+            streams = listOf(Stream("time", listOf(0.0, 5.0, 340.0, 800.0)))
+        }
+        assertTrue(SyncEngine(api, store).sync(b, settings, startMs + 1_000_000) is SyncOutcome.Synced)
+        assertEquals(listOf(null, null, 60.0, null), api.lastPut!!.first { it.type == StreamCodes.VE }.data)
+    }
 }
