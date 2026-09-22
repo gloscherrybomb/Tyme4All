@@ -29,7 +29,7 @@ object Notifications {
     /** [discardable] adds a "Discard" action that gives up on the sessions still waiting for an activity. */
     fun serviceNotification(ctx: Context, text: String, discardable: Boolean = false): Notification =
         NotificationCompat.Builder(ctx, CHANNEL_SERVICE)
-            .setContentTitle("K-Breathe Run")
+            .setContentTitle("Tyme4All")
             .setContentText(text)
             .setSmallIcon(android.R.drawable.stat_notify_sync_noanim)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
@@ -60,7 +60,7 @@ object Notifications {
     fun unmatched(ctx: Context, sessionId: String) = post(ctx, sessionId.hashCode(),
         NotificationCompat.Builder(ctx, CHANNEL_SYNC)
             .setContentTitle("No Intervals.icu activity found for a breathing session")
-            .setContentText("Open K-Breathe Run to match it by hand")
+            .setContentText("Open Tyme4All to match it by hand")
             .setSmallIcon(android.R.drawable.stat_notify_error)
             .setContentIntent(openApp(ctx)).setAutoCancel(true).build())
 

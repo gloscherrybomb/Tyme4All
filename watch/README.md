@@ -1,8 +1,10 @@
-# K-Breathe — Zepp OS watch extension
+# Tyme4All watch extension (Zepp OS)
+
+> **Status:** builds and passes its unit tests, but has not yet run on a real watch. The simulator cannot host workout extensions. Treat it as experimental; the phone app records and syncs without it.
 
 A workout data-widget for the Amazfit Cheetah 2 Ultra that shows live
 Tymewear VitalPro breathing data during a run, and drives session
-start/stop on the phone app ([`K-Breathe Run`](../phone/README.md)). It
+start/stop on the [phone app](../phone/README.md). It
 does no BLE of its own — it reads the phone app's local relay over the
 watch's loopback network — and holds no state beyond the last received
 payload and the latest heart rate reading.
@@ -71,7 +73,7 @@ still stops polling on its own within 15 s instead of running forever.
 ```bash
 cd watch
 npm test           # node --test test/ — 25 unit tests, no device needed
-npm run build       # zeus build   -> watch/dist/<appId>-K-Breathe-<version>-<timestamp>.zab
+npm run build       # zeus build   -> watch/dist/<appId>-Tyme4All-<version>-<timestamp>.zab
 npm run dev          # zeus dev    -> interactive Zepp OS simulator (see Simulator notes below)
 ```
 
@@ -92,7 +94,7 @@ Zepp developer console is needed only for store submission, not for
 day-one testing.
 
 `zeus build` has been run successfully in this repo and produces, e.g.,
-`watch/dist/1000001-K-Breathe-0.1.0-20260903193250.zab` (~57 KB). The build
+`watch/dist/1000001-Tyme4All-0.1.0-20260903193250.zab` (~57 KB). The build
 emits two harmless warnings (the app icon is smaller than Zepp's
 recommended 248x248, and an `import.meta` note about the test file, which
 is not part of the bundled app) — neither requires a code change.
@@ -172,7 +174,7 @@ cd watch && zeus dev
 # device)
 ```
 
-In the simulator, open the Workout app, add the K-Breathe data widget to a
+In the simulator, open the Workout app, add the Tyme4All data widget to a
 run page, and start a run.
 
 Expected observations:

@@ -2,7 +2,7 @@
   "configVersion": "v3",
   "app": {
     "appId": 1000001,
-    "appName": "K-Breathe",
+    "appName": "Tyme4All",
     "appType": "app",
     "version": { "code": 1, "name": "0.1.0" },
     "icon": "icon.png",
@@ -20,7 +20,7 @@
           "widgets": [
             {
               "path": "page/index",
-              "name": "K-Breathe",
+              "name": "Tyme4All",
               "icon": "icon.png",
               "runtime": { "ability": [ { "type": 1, "subType": [1, 2, 3, 4, 5, 6] } ] }
             }
@@ -35,6 +35,6 @@
       "designWidth": 480
     }
   },
-  "i18n": { "en-US": { "appName": "K-Breathe" } },
+  "i18n": { "en-US": { "appName": "Tyme4All" } },
   "defaultLanguage": "en-US"
 }

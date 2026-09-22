@@ -52,7 +52,7 @@ class MainActivity : ComponentActivity() {
         refreshPairedCount()
 
         setContent {
-            KBreatheTheme {
+            Tyme4AllTheme {
                 Surface {
                     MainScreen(
                         onRequestPermissions = { requestPermissions.launch(requiredPermissions()) },

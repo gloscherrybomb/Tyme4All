@@ -1,15 +1,68 @@
-# K-Breathe Run
+# Tyme4All
 
-Tymewear VitalPro breathing data on an Amazfit Cheetah 2 Ultra, recorded on the phone whenever the strap is worn and merged into the matching Intervals.icu activity, whatever recorded it.
+Record breathing data from a [Tymewear VitalPro](https://www.tymewear.com/) strap with any device, and add it to the matching activity on [Intervals.icu](https://intervals.icu).
 
-## Subprojects
+Tymewear's own apps and the Karoo extension [K-Breathe](https://github.com/gloscherrybomb/k-breathe) record breathing on the device you train with. Tyme4All is for everything else: runs on a watch that cannot talk to the strap, indoor rides in TrainingPeaks Virtual, or any other activity that ends up on Intervals.icu. Your Android phone records the strap in the background, and when the activity appears on Intervals.icu the phone attaches the breathing streams to it.
 
-- [`phone/`](phone/README.md) — **K-Breathe Run**, the Android phone app. Connects to the strap, records sessions, and syncs breathing streams to Intervals.icu. Complete; see its README for setup, usage, and the first real session checklist.
-- [`watch/`](watch/README.md) — **K-Breathe**, the Zepp OS workout extension for the watch. Shows the live breathing values on a Run data page and can start or stop a session early through the phone's relay, though sessions now open and close on their own when the strap is worn; see its README for the build/install commands and [`watch/DAY-ONE.md`](watch/DAY-ONE.md) for the checklist to run through once the watch is in hand.
-- [`pc/`](pc/README.md) — Windows always-on-top overlay for TrainingPeaks Virtual, fed by the phone app over Wi-Fi.
+I really like coffee, so if this is useful to you, please buy me one :)
 
-## Design
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/jeastwood)
 
-See `docs/superpowers/specs/` for the full design, including [`2026-09-03-tymewear-amazfit-design.md`](docs/superpowers/specs/2026-09-03-tymewear-amazfit-design.md), and [`docs/superpowers/plans/2026-09-03-phone-app.md`](docs/superpowers/plans/2026-09-03-phone-app.md) for the phone app's implementation plan (the watch extension's plan is at [`docs/superpowers/plans/2026-09-03-watch-extension.md`](docs/superpowers/plans/2026-09-03-watch-extension.md)).
+## How it works
 
-The 2026-09-22 extension (strap-driven sessions, overlap matching, PC overlay) is in [`docs/superpowers/specs/2026-09-22-strap-driven-sessions-and-tpv-overlay-design.md`](docs/superpowers/specs/2026-09-22-strap-driven-sessions-and-tpv-overlay-design.md) with its plan at [`docs/superpowers/plans/2026-09-22-strap-driven-sessions-and-tpv-overlay.md`](docs/superpowers/plans/2026-09-22-strap-driven-sessions-and-tpv-overlay.md).
+1. Put the strap on. The phone notices it, connects, and starts recording. There is nothing to press.
+2. Train with whatever you normally use: a watch, TrainingPeaks Virtual, a bike computer.
+3. Take the strap off. Three minutes later the phone closes the session.
+4. Once your activity has uploaded to Intervals.icu, the phone finds the activity that overlaps the session most and pushes seven breathing streams onto it: ventilation, breathing rate, tidal volume, I:E ratio, VE zone, breathing reserve and mobilization index.
+
+The stream codes are the same ones K-Breathe writes on the Karoo, so Intervals.icu charts built for one work for the other. Tymewear's dashboard reads Karoo rides through its Intervals.icu integration; whether it also picks up streams added to an activity afterwards has not been confirmed yet.
+
+## What is in this repo
+
+| Folder | What it is | Status |
+|---|---|---|
+| [`phone/`](phone/README.md) | Android app. Connects to the strap, records, and syncs to Intervals.icu. | Working. Tested end to end on a Nothing phone with Android 16. |
+| [`pc/`](pc/README.md) | A small always-on-top window for Windows that shows live breathing values over TrainingPeaks Virtual, fed by the phone over Wi-Fi. | Written, not yet run on Windows. |
+| [`watch/`](watch/README.md) | A data page for the Amazfit Cheetah 2 Ultra that shows live breathing values during a run. | Experimental. Not yet run on a real watch. |
+
+## What you need
+
+- An Android phone with Android 12 or newer. Older versions work but keep the service running all the time.
+- A Tymewear VitalPro strap.
+- An Intervals.icu account with a **Supporter** subscription. Uploading custom streams needs it.
+- Something that puts your activities on Intervals.icu. The Zepp app, TrainingPeaks Virtual and Garmin Connect all have integrations. Activities imported from Strava cannot be edited, so they are skipped.
+
+## Getting started
+
+1. Download `tyme4all.apk` from the [latest release](../../releases/latest) and install it. You will need to allow installs from your browser or file manager.
+2. Open the app and follow the setup in the [phone README](phone/README.md#first-time-setup). In short: grant permissions, exclude the app from battery optimisation, paste your Intervals.icu API key, and create the seven custom streams in Intervals.icu.
+3. On the Status tab, tap **Pair strap** with the strap on. From then on the app wakes up by itself when the strap comes into range, even if the app has been closed.
+4. Go for a run or a ride. The phone shows "Recording since …" while it records, and a notification when the data has been added to Intervals.icu.
+
+Set your own ventilation thresholds on the Settings tab before you trust the zones. The defaults are placeholders. Get your values from a [Tymewear threshold test](https://www.tymewear.com/blogs/startup-guides/threshold-test).
+
+## Things to know
+
+- **The strap takes one connection at a time.** Before a ride where the Karoo should record the strap, turn **Service enabled** off in the app. Tyme4All never pushes to a Karoo activity, so a Karoo recording is never overwritten.
+- **Put the strap on a few minutes early.** Android can take a couple of minutes to notice the strap, and the session has to overlap the activity by at least five minutes to be matched.
+- **The phone keeps running after the session** until the activity has been found, for up to six hours. If you only tried the strap on, tap **Discard, no activity coming** on the notification.
+- **Nothing leaves your phone except the push to Intervals.icu.** The Wi-Fi overlay is off by default. When on, it needs a token and cannot start or stop recording.
+
+## Building from source
+
+Phone app, from `phone/`:
+
+```bash
+./gradlew :app:testDebugUnitTest assembleDebug
+adb install -r app/build/outputs/apk/debug/tyme4all.apk
+```
+
+The watch extension needs Node and the Zepp OS CLI; see [`watch/README.md`](watch/README.md). Design notes and implementation plans are in [`docs/superpowers/`](docs/superpowers/).
+
+## Disclaimer
+
+Tyme4All is an independent hobby project. It is not made, endorsed or supported by Tymewear, Zepp, Amazfit, TrainingPeaks, Hammerhead or Intervals.icu. It is not a medical device.
+
+## License
+
+[MIT](LICENSE)

@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "KBreatheRun"
+rootProject.name = "Tyme4All"
 include(":app")

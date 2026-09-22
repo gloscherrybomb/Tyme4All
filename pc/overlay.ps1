@@ -1,4 +1,4 @@
-# K-Breathe overlay for TrainingPeaks Virtual. Polls the phone's relay once a second and shows
+# Tyme4All overlay for TrainingPeaks Virtual. Polls the phone's relay once a second and shows
 # VE, zone, BR and TV in a small always-on-top panel. Display only: it never starts or stops
 # anything on the phone. PowerShell 5.1, WPF, no dependencies.
 param([string]$Url)
@@ -6,7 +6,7 @@ param([string]$Url)
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Net.Http
 [System.Reflection.Assembly]::LoadWithPartialName('Microsoft.VisualBasic') | Out-Null
 
-$configDir  = Join-Path $env:APPDATA 'KBreathe'
+$configDir  = Join-Path $env:APPDATA 'Tyme4All'
 $configPath = Join-Path $configDir 'overlay.json'
 $config = @{ url = ''; hasPos = $false; x = 0; y = 0; opacity = 0.7 }
 if (Test-Path $configPath) {
@@ -22,7 +22,7 @@ function Save-Config {
   $config | ConvertTo-Json | Set-Content -Path $configPath -Encoding UTF8
 }
 function Ask-Url([string]$current) {
-  $v = [Microsoft.VisualBasic.Interaction]::InputBox('Paste the overlay URL shown on the phone Status tab', 'K-Breathe overlay', $current)
+  $v = [Microsoft.VisualBasic.Interaction]::InputBox('Paste the overlay URL shown on the phone Status tab', 'Tyme4All overlay', $current)
   if ($v) { return $v.Trim() } else { return $current }
 }
 if (-not $config.url) { $config.url = Ask-Url ''; if (-not $config.url) { exit }; Save-Config }
@@ -33,7 +33,7 @@ $zoneNames  = '--', 'Endurance', 'VT1', 'VT2', 'Top Z4', 'VO2Max'
 [xml]$xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="K-Breathe" Width="260" Height="140" WindowStyle="None" AllowsTransparency="True"
+        Title="Tyme4All" Width="260" Height="140" WindowStyle="None" AllowsTransparency="True"
         Background="Transparent" Topmost="True" ShowInTaskbar="False" ResizeMode="NoResize">
   <Border Name="Panel" CornerRadius="10" Background="#424242" Padding="12">
     <Grid>

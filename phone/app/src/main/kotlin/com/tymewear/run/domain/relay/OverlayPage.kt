@@ -4,7 +4,7 @@ package com.tymewear.run.domain.relay
 object OverlayPage {
     val HTML: String = """<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>K-Breathe</title>
+<title>Tyme4All</title>
 <style>
   html,body{margin:0;height:100%;background:#111;color:#fff;font-family:system-ui,Segoe UI,Roboto,sans-serif}
   #panel{box-sizing:border-box;min-height:100%;padding:24px;background:#424242;transition:background .3s}

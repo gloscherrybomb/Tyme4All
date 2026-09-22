@@ -1,4 +1,4 @@
-# K-Breathe watch extension — day-one checklist
+# Tyme4All watch extension — day-one checklist
 
 This is the checklist to run through once the Amazfit Cheetah 2 Ultra is in
 hand (or, for item 0, before it arrives). Each item is a go/no-go for the
@@ -68,18 +68,18 @@ page in the Zepp app.
 `zeus login` and `zeus preview` are already confirmed to work from this
 machine (see the build verification report) — `zeus preview` produces a QR
 code valid for 7 days that installs with the placeholder `appId` `1000001`.
-Scan it with the Zepp app. Pass looks like: K-Breathe installs and appears
+Scan it with the Zepp app. Pass looks like: Tyme4All installs and appears
 in the watch's app list without error.
 
 ## 2. Extension appears in the Run app's data page configuration
 
-Start a Run on the watch, open data page settings, confirm **K-Breathe**
+Start a Run on the watch, open data page settings, confirm **Tyme4All**
 appears as a data-widget option and can be added to a page.
 
 - [ ] **Result:** _______________
 
 **Unverified** — this is a runtime/OS behaviour that `zeus build` cannot
-confirm. Pass looks like: K-Breathe is selectable and shows on the page.
+confirm. Pass looks like: Tyme4All is selectable and shows on the page.
 
 ## 3. Lifecycle: `onInit` at run start, `onDestroy` at run end
 
@@ -117,7 +117,7 @@ loopback, or fetch directly from the extension if the platform allows it
 
 With the TymeHR strap paired to the watch, confirm the `HeartRate` sensor
 API (`watch/page/index.js`, `startHr`/`stopHr`) returns live values while
-the K-Breathe extension is active, and that those values track the strap's
+the Tyme4All extension is active, and that those values track the strap's
 readings — not the watch's own optical sensor. Compare the MI figure on the
 page against the strap's implied HR for about a minute; they should track
 together. Then remove the TymeHR: confirm the watch falls back to optical
@@ -135,7 +135,7 @@ the phone's HR source independently of the watch).
 
 ## 5. Full run: phone recording, session start/stop
 
-Start a run with the K-Breathe widget on a page and the phone app running.
+Start a run with the Tyme4All widget on a page and the phone app running.
 Confirm in the phone app's Sessions tab that a session opens at run start,
 values refresh within 2 s after swiping away and back to the widget, and
 the session closes with reason `watch` when the run ends.
@@ -148,7 +148,7 @@ the session closes with reason `watch` when the run ends.
 
 With the phone in a pocket (screen off, Zepp app backgrounded) for a full
 run — at least 5 minutes — confirm the `phone?` state never appears. If it
-does, exclude the Zepp app (and K-Breathe Run) from Android battery
+does, exclude the Zepp app (and Tyme4All) from Android battery
 optimisation and repeat.
 
 - [ ] **Result:** _______________

@@ -1,6 +1,6 @@
-# K-Breathe PC overlay
+# Tyme4All PC overlay
 
-A small always-on-top panel for Windows that shows live breathing values from the K-Breathe Run
+A small always-on-top panel for Windows that shows live breathing values from the Tyme4All
 phone app while you ride in TrainingPeaks Virtual (TPV). It is display only. Recording and the
 Intervals.icu merge happen on the phone; see `../phone/README.md`.
 
@@ -15,7 +15,7 @@ Intervals.icu merge happen on the phone; see `../phone/README.md`.
 5. In TPV, set the display mode to **borderless windowed** (or windowed), not exclusive
    fullscreen. Exclusive fullscreen hides every other window, including this one.
 
-The URL is kept in `%APPDATA%\KBreathe\overlay.json` together with the panel position (`hasPos`, `x`, `y`;
+The URL is kept in `%APPDATA%\Tyme4All\overlay.json` together with the panel position (`hasPos`, `x`, `y`;
 the panel opens top-right until it has been closed once) and opacity.
 
 ## Using it

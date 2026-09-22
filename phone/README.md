@@ -1,6 +1,6 @@
-# K-Breathe Run
+# Tyme4All
 
-Android phone app that records breathing data from a Tymewear VitalPro strap during any activity and merges it into the matching Intervals.icu activity. It is the phone half of the K-Breathe project; the watch half is the Zepp OS extension in `../watch/`, `../pc/` holds the Windows overlay for TrainingPeaks Virtual, and the design spec is at `../docs/superpowers/specs/2026-09-03-tymewear-amazfit-design.md`.
+Android phone app that records breathing data from a Tymewear VitalPro strap during any activity and merges it into the matching Intervals.icu activity. It is the core of [Tyme4All](../README.md): the watch extension in `../watch/` and the Windows overlay in `../pc/` both read from it. The design notes are in `../docs/superpowers/specs/`.
 
 ## What it does
 
@@ -25,7 +25,7 @@ It does not produce a FIT file, does not connect to a heart rate sensor, and doe
 ```bash
 cd phone
 ./gradlew assembleDebug
-adb install -r app/build/outputs/apk/debug/k-breathe-run.apk
+adb install -r app/build/outputs/apk/debug/tyme4all.apk
 ```
 
 ## First-time setup
@@ -33,7 +33,7 @@ adb install -r app/build/outputs/apk/debug/k-breathe-run.apk
 Do this once, on the Status and Settings tabs.
 
 1. **Permissions.** On the Status tab, tap **Request permissions** and grant everything asked (Bluetooth, notifications, and any others the dialog lists).
-2. **Battery optimisation.** Still on the Status tab, tap **Battery optimisation** and exclude K-Breathe Run. Then, in Android's own system settings, also exclude the **Zepp** app. If either app is left under battery optimisation, Android can kill it mid-run and the watch display or the recording can drop out.
+2. **Battery optimisation.** Still on the Status tab, tap **Battery optimisation** and exclude Tyme4All. Then, in Android's own system settings, also exclude the **Zepp** app. If either app is left under battery optimisation, Android can kill it mid-run and the watch display or the recording can drop out.
 3. **Intervals.icu Supporter.** Confirm your Intervals.icu account has an active Supporter subscription — stream upload fails without one.
 4. **API key.** In Intervals.icu, go to Settings → Developer and copy your API key. Paste it into the **API key** field on the Settings tab and tap **Test** to confirm it's accepted.
 5. **Custom streams.** In Intervals.icu, open any activity → Charts → Custom Streams → Add Stream, and create these seven codes with these exact units:
@@ -72,7 +72,7 @@ Because starting is automatic, put the strap on a couple of minutes before the a
 detection and the strap connection take up to a minute, and the session must overlap the activity
 by at least 5 minutes to match.
 
-**Karoo rides.** The strap accepts one Bluetooth connection, and the Karoo's own K-Breathe extension
+**Karoo rides.** The strap accepts one Bluetooth connection, and the Karoo's own [K-Breathe](https://github.com/gloscherrybomb/k-breathe) extension
 records the same breathing fields into its FIT file. Before a Karoo ride, turn **Service enabled**
 off on the Settings tab so the phone leaves the strap to the Karoo; turn it back on afterwards.
 If the phone does take the strap during a Karoo ride, the sync never pushes to a Karoo activity,
@@ -115,9 +115,9 @@ from the Status tab) reverts to the previous always-on behaviour.
 
 | Notification | Meaning |
 |---|---|
-| K-Breathe Run: Recording since 13:48 · VE 72 L/min | The persistent service notification while a session is open; the VE refreshes every 30 s |
-| K-Breathe Run: Waiting for a matching Intervals.icu activity | Strap off, a finished session is still waiting for its activity to appear (up to 6 hours); the service stays running for that. Its **Discard, no activity coming** action gives up on those sessions at once, for example after just trying the strap on |
-| K-Breathe Run: Strap connected / Waiting for strap | The same notification when nothing is recording or pending |
+| Tyme4All: Recording since 13:48 · VE 72 L/min | The persistent service notification while a session is open; the VE refreshes every 30 s |
+| Tyme4All: Waiting for a matching Intervals.icu activity | Strap off, a finished session is still waiting for its activity to appear (up to 6 hours); the service stays running for that. Its **Discard, no activity coming** action gives up on those sessions at once, for example after just trying the strap on |
+| Tyme4All: Strap connected / Waiting for strap | The same notification when nothing is recording or pending |
 | Breathing data synced to Intervals.icu | Streams pushed; tap opens the activity |
 | Intervals.icu sync failed | Push failed; the text names the reason |
 | No Intervals.icu activity found for a breathing session | No overlapping activity after 6 hours (only for sessions of 15 minutes or more); match by hand on the Sessions tab |

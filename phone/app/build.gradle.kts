@@ -27,7 +27,7 @@ android {
     applicationVariants.all {
         outputs.all {
             (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl)
-                .outputFileName = "k-breathe-run.apk"
+                .outputFileName = "tyme4all.apk"
         }
     }
     compileOptions {
