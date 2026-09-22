@@ -28,6 +28,19 @@ cd phone
 adb install -r app/build/outputs/apk/debug/tyme4all.apk
 ```
 
+### Release builds
+
+`./gradlew assembleRelease` signs with the key named by these properties in your own `~/.gradle/gradle.properties`, never in the repo:
+
+```properties
+TYME4ALL_STORE_FILE=/path/to/tyme4all-release.jks
+TYME4ALL_STORE_PASSWORD=...
+TYME4ALL_KEY_ALIAS=tyme4all
+TYME4ALL_KEY_PASSWORD=...
+```
+
+Without them the release build falls back to the debug key, which is fine for your own phone. APKs on the GitHub releases page are signed with the project key, SHA-256 certificate fingerprint `CF:19:9E:25:5F:70:55:29:E6:59:23:91:04:D4:7A:BC:BC:8E:A9:60:57:AB:89:1D:27:D3:66:BF:42:05:6F:12`. Android only upgrades an app in place when the key matches, so switching between a self-built debug APK and a release APK means uninstalling first.
+
 ## First-time setup
 
 Do this once, on the Status and Settings tabs.

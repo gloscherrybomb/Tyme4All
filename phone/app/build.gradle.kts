@@ -17,9 +17,23 @@ android {
         versionName = "0.1.0"
     }
 
+    // Release signing comes from ~/.gradle/gradle.properties (TYME4ALL_*), never from the repo.
+    // Without those properties a release build falls back to the debug key so anyone can build.
+    val releaseStore = providers.gradleProperty("TYME4ALL_STORE_FILE").orNull
+    signingConfigs {
+        if (releaseStore != null) {
+            create("release") {
+                storeFile = file(releaseStore)
+                storePassword = providers.gradleProperty("TYME4ALL_STORE_PASSWORD").get()
+                keyAlias = providers.gradleProperty("TYME4ALL_KEY_ALIAS").get()
+                keyPassword = providers.gradleProperty("TYME4ALL_KEY_PASSWORD").get()
+            }
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
