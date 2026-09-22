@@ -59,7 +59,7 @@ fun SettingsScreen() {
     var sensorId by remember { mutableStateOf(initial.sensorId ?: "") }
     var serviceEnabled by remember { mutableStateOf(initial.serviceEnabled) }
     var apiKey by remember { mutableStateOf(initial.intervalsApiKey ?: "") }
-    var fallbackStopMinutes by remember { mutableStateOf(NumField(initial.fallbackStopMinutes.toString())) }
+    var idleStopMinutes by remember { mutableStateOf(NumField(initial.idleStopMinutes.toString())) }
     var retentionDays by remember { mutableStateOf(NumField(initial.retentionDays.toString())) }
 
     var keyTestResult by remember { mutableStateOf<String?>(null) }
@@ -125,7 +125,7 @@ fun SettingsScreen() {
 
         HorizontalDivider()
 
-        IntField("Fallback stop minutes", fallbackStopMinutes) { fallbackStopMinutes = it }
+        IntField("Stop session after no breathing data for (minutes)", idleStopMinutes) { idleStopMinutes = it }
         IntField("Retention days", retentionDays) { retentionDays = it }
 
         HorizontalDivider()
@@ -155,7 +155,7 @@ fun SettingsScreen() {
             val maxBrd = maxBr.text.toDoubleOrNull()
             val restingHrd = restingHr.text.toDoubleOrNull()
             val maxHrd = maxHr.text.toDoubleOrNull()
-            val fallbackI = fallbackStopMinutes.text.toIntOrNull()
+            val idleI = idleStopMinutes.text.toIntOrNull()
             val retentionI = retentionDays.text.toIntOrNull()
 
             vt1 = vt1.copy(error = vt1d == null)
@@ -166,12 +166,12 @@ fun SettingsScreen() {
             maxBr = maxBr.copy(error = maxBrd == null)
             restingHr = restingHr.copy(error = restingHrd == null)
             maxHr = maxHr.copy(error = maxHrd == null)
-            fallbackStopMinutes = fallbackStopMinutes.copy(error = fallbackI == null)
+            idleStopMinutes = idleStopMinutes.copy(error = idleI == null)
             retentionDays = retentionDays.copy(error = retentionI == null)
 
             if (vt1d != null && vt2d != null && topZ4d != null && vo2maxd != null &&
                 restingBrd != null && maxBrd != null && restingHrd != null && maxHrd != null &&
-                fallbackI != null && retentionI != null
+                idleI != null && retentionI != null
             ) {
                 Graph.settings.save(
                     Settings(
@@ -180,7 +180,7 @@ fun SettingsScreen() {
                         sensorId = sensorId.ifBlank { null },
                         serviceEnabled = serviceEnabled,
                         intervalsApiKey = apiKey.ifBlank { null },
-                        fallbackStopMinutes = fallbackI,
+                        idleStopMinutes = idleI,
                         retentionDays = retentionI,
                     ),
                 )

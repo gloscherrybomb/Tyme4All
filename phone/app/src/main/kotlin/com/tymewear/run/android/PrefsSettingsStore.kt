@@ -28,7 +28,7 @@ class PrefsSettingsStore(context: Context) : SettingsStore {
             .putString("sensor_id", settings.sensorId ?: "")
             .putBoolean("service_enabled", settings.serviceEnabled)
             .putString("intervals_key", settings.intervalsApiKey ?: "")
-            .putInt("fallback_stop_min", settings.fallbackStopMinutes)
+            .putInt("idle_stop_min", settings.idleStopMinutes)
             .putInt("retention_days", settings.retentionDays)
             .apply()
         state.value = settings
@@ -43,7 +43,7 @@ class PrefsSettingsStore(context: Context) : SettingsStore {
             sensorId = prefs.getString("sensor_id", "")!!.ifBlank { null },
             serviceEnabled = prefs.getBoolean("service_enabled", d.serviceEnabled),
             intervalsApiKey = prefs.getString("intervals_key", "")!!.ifBlank { null },
-            fallbackStopMinutes = prefs.getInt("fallback_stop_min", d.fallbackStopMinutes),
+            idleStopMinutes = prefs.getInt("idle_stop_min", d.idleStopMinutes),
             retentionDays = prefs.getInt("retention_days", d.retentionDays),
         )
     }

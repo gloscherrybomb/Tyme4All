@@ -9,7 +9,7 @@ data class Settings(
     val sensorId: String?,
     val serviceEnabled: Boolean,
     val intervalsApiKey: String?,
-    val fallbackStopMinutes: Int,
+    val idleStopMinutes: Int,
     val retentionDays: Int,
 ) {
     companion object {
@@ -19,7 +19,7 @@ data class Settings(
             sensorId = null,
             serviceEnabled = true,
             intervalsApiKey = null,
-            fallbackStopMinutes = 10,
+            idleStopMinutes = 3,
             retentionDays = Constants.RETENTION_DAYS,
         )
     }

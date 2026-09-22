@@ -11,7 +11,7 @@ class SettingsTest {
         val d = Settings.DEFAULT
         assertEquals(ZoneThresholds(73.0, 96.0, 112.0, 130.0), d.thresholds)
         assertEquals(ReserveSettings(12.0, 55.0, 60.0, 190.0), d.reserve)
-        assertEquals(10, d.fallbackStopMinutes)
+        assertEquals(3, d.idleStopMinutes)
         assertEquals(90, d.retentionDays)
         assertEquals(null, d.intervalsApiKey)
         assertEquals(true, d.serviceEnabled)

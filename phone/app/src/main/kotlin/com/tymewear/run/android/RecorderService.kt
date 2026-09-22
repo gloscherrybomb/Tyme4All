@@ -71,7 +71,7 @@ class RecorderService : Service() {
             settingsJob = scope.launch {
                 Graph.settings.changes.collect { s ->
                     Graph.live.setServiceEnabled(s.serviceEnabled)
-                    Graph.sessions.fallbackDisconnectedMs = s.fallbackStopMinutes * 60_000L
+                    Graph.sessions.idleStopMs = s.idleStopMinutes * 60_000L
                     if (s.serviceEnabled) {
                         connector.start()
                     } else {

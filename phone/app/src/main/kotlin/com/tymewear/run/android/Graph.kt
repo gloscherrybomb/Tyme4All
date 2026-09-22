@@ -33,7 +33,7 @@ object Graph {
         settings = PrefsSettingsStore(context)
         live = LiveState()
         sessionStore = SessionStore(File(context.filesDir, "sessions"))
-        sessions = SessionController(sessionStore, fallbackDisconnectedMs = settings.load().fallbackStopMinutes * 60_000L)
+        sessions = SessionController(sessionStore, idleStopMs = settings.load().idleStopMinutes * 60_000L)
         sessions.listener = { live.setSessionId(it) }
         live.setServiceEnabled(settings.load().serviceEnabled)
     }
