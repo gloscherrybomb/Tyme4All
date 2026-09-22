@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.IBinder
 import com.tymewear.run.BuildConfig
 import com.tymewear.run.domain.Constants
+import com.tymewear.run.domain.NotificationPolicy
 import com.tymewear.run.domain.ServiceLifecycle
 import com.tymewear.run.domain.StrapStatus
 import com.tymewear.run.domain.relay.RelayServer
@@ -26,6 +27,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
+import java.time.ZoneId
 
 class RecorderService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -35,6 +37,8 @@ class RecorderService : Service() {
     private var settingsJob: Job? = null
     private var housekeepingJob: Job? = null
     private var lastNotificationText: String? = null
+    private var recordingShownFor: String? = null
+    private var lastRecordingPostMs = 0L
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -93,7 +97,7 @@ class RecorderService : Service() {
         var lastSyncMs = 0L
         while (scope.isActive) {
             val now = System.currentTimeMillis()
-            Graph.sessions.tick(now)?.let { Timber.i("Fallback stop: $it") }
+            Graph.sessions.tick(now)?.let { Timber.i("Session closed: $it") }
             if (relay == null) {
                 try {
                     relay = RelayServer(Constants.RELAY_PORT, Graph.live, Graph.settings, Graph.sessions, version = BuildConfig.VERSION_NAME)
@@ -123,6 +127,17 @@ class RecorderService : Service() {
                     .notify(Notifications.ID_SERVICE, Notifications.serviceNotification(this, text))
             }
 
+            // Recording notification: shown while a session is open, body refreshed at most every 30 s.
+            if (session == null) {
+                if (recordingShownFor != null) { Notifications.clearRecording(this); recordingShownFor = null }
+            } else if (session != recordingShownFor || now - lastRecordingPostMs >= NotificationPolicy.RECORDING_REFRESH_MS) {
+                val startMs = Graph.sessionStore.meta(session)?.startMs ?: now
+                val ve = Graph.live.payload(Graph.settings.load(), now).ve
+                Notifications.recording(this, NotificationPolicy.recordingBody(startMs, ve, ZoneId.systemDefault()))
+                recordingShownFor = session
+                lastRecordingPostMs = now
+            }
+
             if (now - lastSyncMs >= 60_000) { lastSyncMs = now; runSyncPass(now) }
             if (now - lastPruneMs >= 86_400_000) { lastPruneMs = now; Graph.sessionStore.prune(now, Graph.settings.load().retentionDays) }
 
@@ -142,15 +157,15 @@ class RecorderService : Service() {
             val settings = Graph.settings.load()
             val metas = Graph.sessionStore.list()
             for (m in SyncScheduler.expired(metas, now)) {
-                Graph.sessionStore.updateMeta(m.id) { it.copy(syncState = "unmatched", syncMessage = "no Amazfit activity appeared within 6 hours") }
-                Notifications.unmatched(this@RecorderService, m.id)
+                Graph.sessionStore.updateMeta(m.id) { it.copy(syncState = "unmatched", syncMessage = "no Intervals.icu activity overlapped this session within 6 hours") }
+                if (NotificationPolicy.notifyUnmatched(m)) Notifications.unmatched(this@RecorderService, m.id)
             }
             val key = settings.intervalsApiKey ?: return@withContext
             val engine = SyncEngine(IntervalsClient(key), Graph.sessionStore)
             for (m in SyncScheduler.due(metas, now)) {
                 try {
                     when (val out = engine.sync(m.id, settings, now)) {
-                        is SyncOutcome.Synced -> Notifications.synced(this@RecorderService, m.id, out.activityId)
+                        is SyncOutcome.Synced -> Notifications.synced(this@RecorderService, m.id, out.activityId, out.activityLabel)
                         is SyncOutcome.Failed -> Notifications.syncFailed(this@RecorderService, m.id, out.message)
                         else -> {}
                     }
@@ -166,6 +181,7 @@ class RecorderService : Service() {
     override fun onDestroy() {
         connector.stop()
         relay?.stop(); relay = null
+        Notifications.clearRecording(this)
         scope.cancel()
         super.onDestroy()
     }

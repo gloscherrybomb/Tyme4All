@@ -14,6 +14,7 @@ object Notifications {
     const val CHANNEL_SERVICE = "kbreathe_service"
     const val CHANNEL_SYNC = "kbreathe_sync"
     const val ID_SERVICE = 1
+    const val ID_RECORDING = 2
 
     fun ensureChannels(ctx: Context) {
         val mgr = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -33,10 +34,22 @@ object Notifications {
             .setContentIntent(openApp(ctx))
             .build()
 
-    fun synced(ctx: Context, sessionId: String, activityId: String) = post(ctx, sessionId.hashCode(),
+    fun recording(ctx: Context, body: String) = post(ctx, ID_RECORDING,
         NotificationCompat.Builder(ctx, CHANNEL_SYNC)
-            .setContentTitle("Run synced to Intervals.icu")
-            .setContentText("Breathing data added to activity $activityId")
+            .setContentTitle("Recording breathing data")
+            .setContentText(body)
+            .setSmallIcon(android.R.drawable.stat_notify_sync_noanim)
+            .setOngoing(true).setOnlyAlertOnce(true).setShowWhen(false)
+            .setContentIntent(openApp(ctx))
+            .build())
+
+    fun clearRecording(ctx: Context) =
+        (ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(ID_RECORDING)
+
+    fun synced(ctx: Context, sessionId: String, activityId: String, activityLabel: String) = post(ctx, sessionId.hashCode(),
+        NotificationCompat.Builder(ctx, CHANNEL_SYNC)
+            .setContentTitle("Breathing data synced to Intervals.icu")
+            .setContentText("Added to $activityLabel")
             .setSmallIcon(android.R.drawable.stat_notify_sync)
             .setContentIntent(PendingIntent.getActivity(ctx, activityId.hashCode(),
                 Intent(Intent.ACTION_VIEW, Uri.parse("https://intervals.icu/activities/$activityId")), PendingIntent.FLAG_IMMUTABLE))
@@ -51,8 +64,8 @@ object Notifications {
 
     fun unmatched(ctx: Context, sessionId: String) = post(ctx, sessionId.hashCode(),
         NotificationCompat.Builder(ctx, CHANNEL_SYNC)
-            .setContentTitle("No Amazfit run found for a breathing session")
-            .setContentText("Open K-Breathe Run to match session $sessionId by hand")
+            .setContentTitle("No Intervals.icu activity found for a breathing session")
+            .setContentText("Open K-Breathe Run to match it by hand")
             .setSmallIcon(android.R.drawable.stat_notify_error)
             .setContentIntent(openApp(ctx)).setAutoCancel(true).build())
 
