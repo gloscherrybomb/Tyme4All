@@ -155,7 +155,7 @@ Everything else unchanged.
 
 | Situation | Behaviour |
 |---|---|
-| Strap dropout longer than the idle timeout mid-ride | Two sessions; both match the same activity by overlap and both push. The second push overwrites only the samples it has values for? **No**: each push sends full-length arrays with `null` outside its session, so the second push would blank the first. Therefore `SyncEngine` merges: before pushing, if another `synced` session already targets the same activity id, its series is included in the alignment so the pushed arrays carry both. |
+| Strap dropout longer than the idle timeout mid-ride | Two sessions; both match the same activity by overlap. Each push sends full-length arrays with `null` outside its own session, so a naive second push would blank the first. `SyncEngine` therefore merges: before pushing, if other sessions already target the same activity id, their events are included in the alignment so the pushed arrays carry every session. |
 | Strap worn without any activity | Session becomes `unmatched` after 6 hours, then pruned. No notification for unmatched strap-driven sessions shorter than 15 minutes, to avoid noise from fitting the strap. Longer ones notify as today. |
 | Wi-Fi address changes mid-ride | LAN listener rebinds; the overlay's URL is stale. The overlay shows `phone?`; the runner re-copies the URL. Accepted for the first version. |
 | Token leaked on the home network | Reader sees breathing values only. Regenerate from the Status tab. |
