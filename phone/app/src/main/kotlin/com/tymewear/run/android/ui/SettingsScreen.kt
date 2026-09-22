@@ -34,6 +34,7 @@ import com.tymewear.run.android.Graph
 import com.tymewear.run.domain.ReserveSettings
 import com.tymewear.run.domain.Settings
 import com.tymewear.run.domain.ZoneThresholds
+import com.tymewear.run.domain.relay.LanToken
 import com.tymewear.run.domain.sync.IntervalsClient
 import com.tymewear.run.domain.sync.StreamCodes
 import kotlinx.coroutines.Dispatchers
@@ -61,6 +62,8 @@ fun SettingsScreen() {
     var apiKey by remember { mutableStateOf(initial.intervalsApiKey ?: "") }
     var idleStopMinutes by remember { mutableStateOf(NumField(initial.idleStopMinutes.toString())) }
     var retentionDays by remember { mutableStateOf(NumField(initial.retentionDays.toString())) }
+    var lanOverlay by remember { mutableStateOf(initial.lanOverlayEnabled) }
+    var lanToken by remember { mutableStateOf(initial.lanToken) }
 
     var keyTestResult by remember { mutableStateOf<String?>(null) }
     var keyTesting by remember { mutableStateOf(false) }
@@ -130,6 +133,22 @@ fun SettingsScreen() {
 
         HorizontalDivider()
 
+        Text("LAN overlay")
+        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Text("Serve live values on Wi-Fi for the PC overlay")
+            Switch(checked = lanOverlay, onCheckedChange = {
+                lanOverlay = it
+                if (it && lanToken == null) lanToken = LanToken.generate()
+            })
+        }
+        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedButton(onClick = { lanToken = LanToken.generate() }) { Text("Regenerate token") }
+            Text(if (lanToken == null) "No token yet" else "Token set; save to apply")
+        }
+        Text("The overlay URL appears on the Status tab once saved and Wi-Fi is connected.")
+
+        HorizontalDivider()
+
         Card(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("Custom stream codes")
@@ -182,8 +201,8 @@ fun SettingsScreen() {
                         intervalsApiKey = apiKey.ifBlank { null },
                         idleStopMinutes = idleI,
                         retentionDays = retentionI,
-                        lanOverlayEnabled = initial.lanOverlayEnabled,
-                        lanToken = initial.lanToken,
+                        lanOverlayEnabled = lanOverlay,
+                        lanToken = lanToken,
                     ),
                 )
             } else {

@@ -28,6 +28,9 @@ object Graph {
     @Volatile
     var observingCount: Int = 0
 
+    /** Overlay URL of the LAN relay while it is bound, else null. Written by LanRelayManager. */
+    val lanOverlayUrl = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+
     fun init(context: Context) {
         if (this::settings.isInitialized) return
         settings = PrefsSettingsStore(context)

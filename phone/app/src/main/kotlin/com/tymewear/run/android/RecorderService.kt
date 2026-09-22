@@ -32,6 +32,7 @@ import timber.log.Timber
 class RecorderService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private lateinit var connector: StrapConnector
+    private lateinit var lanRelay: LanRelayManager
     private var relay: RelayServer? = null
     private var lastPruneMs = 0L
     private var settingsJob: Job? = null
@@ -49,6 +50,9 @@ class RecorderService : Service() {
         Notifications.ensureChannels(this)
         Graph.sessions.recoverOnStartup(System.currentTimeMillis())
         connector = StrapConnector(this, Graph.live, Graph.sessions, Graph.settings, scope)
+        lanRelay = LanRelayManager(this) { host, token ->
+            RelayServer(host, Constants.RELAY_PORT, Graph.live, Graph.settings, Graph.sessions, version = BuildConfig.VERSION_NAME, token = token)
+        }
         if (CompanionAssociation.isSupported(this)) {
             Graph.observingCount = CompanionAssociation.startObserving(this)
         }
@@ -77,6 +81,7 @@ class RecorderService : Service() {
                 Graph.settings.changes.collect { s ->
                     Graph.live.setServiceEnabled(s.serviceEnabled)
                     Graph.sessions.idleStopMs = s.idleStopMinutes * 60_000L
+                    lanRelay.apply(s.lanOverlayEnabled, s.lanToken)
                     if (s.serviceEnabled) {
                         connector.start()
                     } else {
@@ -181,6 +186,7 @@ class RecorderService : Service() {
 
     override fun onDestroy() {
         connector.stop()
+        lanRelay.stop()
         relay?.stop(); relay = null
         Notifications.clearRecording(this)
         scope.cancel()

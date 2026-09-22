@@ -54,6 +54,7 @@ dependencies {
     implementation(libs.nanohttpd)
     implementation(libs.okhttp)
     implementation(libs.timber)
+    implementation(libs.zxing.core)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

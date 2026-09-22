@@ -1,5 +1,7 @@
 package com.tymewear.run.android.ui
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -17,6 +20,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -105,6 +109,25 @@ fun StatusScreen(
         Text("Battery optimisation")
         Button(onClick = { openBatteryOptimizationSettings(context) }) { Text("Battery optimisation") }
         Text("Also exclude the Zepp app from battery optimisation, or the watch display can drop out mid-run.")
+
+        HorizontalDivider()
+
+        Text("PC overlay")
+        val lanUrl by Graph.lanOverlayUrl.collectAsState()
+        val lanEnabled = Graph.settings.load().lanOverlayEnabled
+        when {
+            !lanEnabled -> Text("Off. Turn on \"LAN overlay\" on the Settings tab.")
+            lanUrl == null -> Text("Waiting for Wi-Fi. The URL appears once the phone has a Wi-Fi address.")
+            else -> {
+                Text(lanUrl!!)
+                OutlinedButton(onClick = {
+                    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    cm.setPrimaryClip(ClipData.newPlainText("overlay url", lanUrl))
+                }) { Text("Copy URL") }
+                QrImage(lanUrl!!, Modifier.size(220.dp))
+                Text("Open this on the PC (pc/overlay.ps1) or in any browser on the same Wi-Fi.")
+            }
+        }
     }
 }
 
