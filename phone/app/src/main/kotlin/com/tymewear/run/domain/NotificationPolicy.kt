@@ -19,13 +19,18 @@ object NotificationPolicy {
 
     /**
      * Body of the single persistent service notification. While a session is open it carries the
-     * recording state (start time and live VE); otherwise it reports the strap connection.
+     * recording state (start time and live VE); with the strap away and a finished session still
+     * waiting for its Intervals.icu activity it says so, because that wait is the only reason the
+     * service is still running; otherwise it reports the strap connection.
      */
-    fun serviceText(status: StrapStatus, recordingStartMs: Long?, ve: Double?, relayDown: Boolean, zone: ZoneId): String {
+    fun serviceText(status: StrapStatus, recordingStartMs: Long?, ve: Double?, syncPending: Boolean, relayDown: Boolean, zone: ZoneId): String {
+        val strapAway = status == StrapStatus.DISCONNECTED || status == StrapStatus.OFF
         val base = if (recordingStartMs != null) {
             val time = DateTimeFormatter.ofPattern("HH:mm").withZone(zone).format(Instant.ofEpochMilli(recordingStartMs))
             val veText = ve?.roundToInt()?.toString() ?: "--"
             "Recording since $time · VE $veText L/min"
+        } else if (syncPending && strapAway) {
+            "Waiting for a matching Intervals.icu activity"
         } else when (status) {
             StrapStatus.CONNECTED -> "Strap connected"
             StrapStatus.STALE -> "Strap data stale"

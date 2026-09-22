@@ -159,6 +159,7 @@ Starting is now automatic, so the runner needs a visible confirmation that recor
 | Notification | Channel | When | Text |
 |---|---|---|---|
 | Recording | the service notification itself, channel `kbreathe_service_v2` (low importance: icon, no sound) | session opens; reverts to the strap text when it closes | body "Recording since 18:42 · VE 34 L/min", refreshed at most every 30 s |
+| Waiting for activity | the service notification itself | strap disconnected or service off while a finished session is still pending sync | body "Waiting for a matching Intervals.icu activity" |
 | Synced | `kbreathe_sync` | push succeeded | "Breathing data synced to Intervals.icu", body names the activity (name, or type and start time); tap opens it |
 | Failed | `kbreathe_sync` | push failed | unchanged |
 | Unmatched | `kbreathe_sync` | 6 hours without a match, session at least 15 minutes long | "No Intervals.icu activity found for a breathing session", body "Open K-Breathe Run to match it by hand" |

@@ -122,7 +122,8 @@ class RecorderService : Service() {
             }
             recordingShownFor = session
             val ve = if (session != null) Graph.live.payload(Graph.settings.load(), now).ve else null
-            val text = NotificationPolicy.serviceText(status, if (session != null) recordingStartMs else null, ve, relay == null, ZoneId.systemDefault())
+            val syncPending = SyncScheduler.anyPending(withContext(Dispatchers.IO) { Graph.sessionStore.list() }, now)
+            val text = NotificationPolicy.serviceText(status, if (session != null) recordingStartMs else null, ve, syncPending, relay == null, ZoneId.systemDefault())
             // While recording, only the VE figure changes tick to tick; hold those updates to one per 30 s.
             val veChurn = session != null && lastNotificationText?.startsWith("Recording") == true &&
                 now - lastNotificationPostMs < NotificationPolicy.RECORDING_REFRESH_MS
@@ -137,7 +138,6 @@ class RecorderService : Service() {
             if (now - lastPruneMs >= 86_400_000) { lastPruneMs = now; Graph.sessionStore.prune(now, Graph.settings.load().retentionDays) }
 
             val settings = Graph.settings.load()
-            val syncPending = SyncScheduler.anyPending(withContext(Dispatchers.IO) { Graph.sessionStore.list() }, now)
             if (ServiceLifecycle.shouldStop(Graph.strapPresence, session != null, settings.serviceEnabled, syncPending)) {
                 Timber.i("Stopping service: presence=${Graph.strapPresence}, session=$session, serviceEnabled=${settings.serviceEnabled}, syncPending=$syncPending")
                 stopSelf()

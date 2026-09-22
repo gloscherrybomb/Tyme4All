@@ -114,7 +114,9 @@ from the Status tab) reverts to the previous always-on behaviour.
 
 | Notification | Meaning |
 |---|---|
-| K-Breathe Run: Recording since 13:48 · VE 72 L/min | The persistent service notification while a session is open; the VE refreshes every 30 s. Otherwise it reads "Strap connected" or "Waiting for strap" |
+| K-Breathe Run: Recording since 13:48 · VE 72 L/min | The persistent service notification while a session is open; the VE refreshes every 30 s |
+| K-Breathe Run: Waiting for a matching Intervals.icu activity | Strap off, a finished session is still waiting for its activity to appear (up to 6 hours); the service stays running for that |
+| K-Breathe Run: Strap connected / Waiting for strap | The same notification when nothing is recording or pending |
 | Breathing data synced to Intervals.icu | Streams pushed; tap opens the activity |
 | Intervals.icu sync failed | Push failed; the text names the reason |
 | No Intervals.icu activity found for a breathing session | No overlapping activity after 6 hours (only for sessions of 15 minutes or more); match by hand on the Sessions tab |
