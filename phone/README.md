@@ -104,7 +104,10 @@ away, instead of the service running all the time in the background. Detection i
 instant; it can take tens of seconds for the system to notice the strap has left, and the
 service intentionally lags rather than guesses. A recording session in progress is never
 interrupted by this — the service keeps running for the full session even if presence
-detection reports the strap as away. Leaving the strap unpaired (or unpairing it again
+detection reports the strap as away. It also keeps running after a session ends until that
+session's Intervals.icu sync has finished or given up (synced, failed, or unmatched after
+6 hours), so taking the strap off before the watch or TPV has uploaded the activity does
+not stop the service before it can push. Leaving the strap unpaired (or unpairing it again
 from the Status tab) reverts to the previous always-on behaviour.
 
 ## Notifications

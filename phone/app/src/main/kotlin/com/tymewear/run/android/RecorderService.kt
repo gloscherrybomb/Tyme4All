@@ -148,8 +148,9 @@ class RecorderService : Service() {
             if (now - lastPruneMs >= 86_400_000) { lastPruneMs = now; Graph.sessionStore.prune(now, Graph.settings.load().retentionDays) }
 
             val settings = Graph.settings.load()
-            if (ServiceLifecycle.shouldStop(Graph.strapPresence, session != null, settings.serviceEnabled)) {
-                Timber.i("Stopping service: presence=${Graph.strapPresence}, session=$session, serviceEnabled=${settings.serviceEnabled}")
+            val syncPending = SyncScheduler.anyPending(withContext(Dispatchers.IO) { Graph.sessionStore.list() }, now)
+            if (ServiceLifecycle.shouldStop(Graph.strapPresence, session != null, settings.serviceEnabled, syncPending)) {
+                Timber.i("Stopping service: presence=${Graph.strapPresence}, session=$session, serviceEnabled=${settings.serviceEnabled}, syncPending=$syncPending")
                 stopSelf()
                 return
             }

@@ -63,7 +63,7 @@ Sessions shorter than 60 seconds are still marked `skipped`. Sessions that never
 
 ### 4.2 Interaction with strap presence
 
-The Companion Device presence logic (`StrapPresenceService`) already keeps the recorder service running while a session is open, so a strap-driven session is never cut by presence detection. No change.
+The Companion Device presence logic (`StrapPresenceService`) already keeps the recorder service running while a session is open, so a strap-driven session is never cut by presence detection. The service also stays alive while a finished session is still pending sync (up to the 6 h give-up window), because presence detection would otherwise stop it when the strap comes off, before TPV or Zepp have uploaded the activity; `ServiceLifecycle.shouldStop` takes a `syncPending` flag computed by `SyncScheduler.anyPending`.
 
 ### 4.3 Recording
 
@@ -179,6 +179,7 @@ Target phone: Nothing Phone (Android 15 or newer, near-stock). Companion Device 
 | Situation | Behaviour |
 |---|---|
 | Strap dropout longer than the idle timeout mid-ride | Two sessions; both match the same activity by overlap. Each push sends full-length arrays with `null` outside its own session, so a naive second push would blank the first. `SyncEngine` therefore merges: before pushing, if other sessions already target the same activity id, their events are included in the alignment so the pushed arrays carry every session. |
+| Strap removed before the activity has uploaded | Service keeps running until the session is synced, unmatched (6 h) or failed, then stops on presence. |
 | Strap worn without any activity | Session becomes `unmatched` after 6 hours, then pruned. Sessions shorter than 15 minutes do not notify (section 8a), to avoid noise from fitting the strap. |
 | Wi-Fi address changes mid-ride | LAN listener rebinds; the overlay's URL is stale. The overlay shows `phone?`; the runner re-copies the URL. Accepted for the first version. |
 | Token leaked on the home network | Reader sees breathing values only. Regenerate from the Status tab. |

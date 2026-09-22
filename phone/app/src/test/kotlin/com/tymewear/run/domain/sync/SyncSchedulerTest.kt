@@ -25,4 +25,16 @@ class SyncSchedulerTest {
         assertEquals(listOf(old), SyncScheduler.expired(listOf(old), now))
         assertEquals(emptyList<SessionMeta>(), SyncScheduler.expired(listOf(old.copy(syncState = "synced")), now))
     }
+    @Test fun `anyPending is true for a finished pending session inside the window`() {
+        assertEquals(true, SyncScheduler.anyPending(listOf(m), nowMs = 1_000 + 6 * 3_600_000L))
+    }
+    @Test fun `anyPending is false once the window has passed`() {
+        assertEquals(false, SyncScheduler.anyPending(listOf(m), nowMs = 1_000 + 6 * 3_600_000L + 1))
+    }
+    @Test fun `anyPending ignores synced failed and skipped sessions`() {
+        assertEquals(false, SyncScheduler.anyPending(listOf(m.copy(syncState = "synced"), m.copy(syncState = "failed"), m.copy(syncState = "skipped")), 2_000))
+    }
+    @Test fun `anyPending ignores an open session`() {
+        assertEquals(false, SyncScheduler.anyPending(listOf(m.copy(endMs = null)), 2_000))
+    }
 }
