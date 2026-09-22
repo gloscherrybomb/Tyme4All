@@ -76,7 +76,7 @@ function Render($p) {
   if ($live -and $null -ne $p.ve) { $veText.Text = [string][math]::Round($p.ve) } else { $veText.Text = '--' }
   $br = '--'; $tv = '--'
   if ($live -and $null -ne $p.br) { $br = [string][math]::Round($p.br) }
-  if ($live -and $null -ne $p.tv) { $tv = ('{0:N1}' -f $p.tv) }
+  if ($live -and $null -ne $p.tv) { $tv = $p.tv.ToString('0.0', [System.Globalization.CultureInfo]::InvariantCulture) }
   $row.Text = "BR $br    TV $tv"
   $z = 0; if ($live -and $p.zone -ge 0 -and $p.zone -lt $zoneColors.Count) { $z = [int]$p.zone }
   $zone.Text = $(if ($live) { $zoneNames[$z] } else { '' })
@@ -104,13 +104,15 @@ $timer.Add_Tick({
       try { Render ($t.Result | ConvertFrom-Json) } catch { RenderFailure }
     } else { RenderFailure }
   }
-  $liveUrl = $config.url -replace '/overlay(\?|$)', '/live$1'
-  $script:pending = $http.GetStringAsync($liveUrl)
+  try {
+    $liveUrl = $config.url -replace '/overlay(\?|$)', '/live$1'
+    $script:pending = $http.GetStringAsync($liveUrl)
+  } catch { $script:pending = $null; RenderFailure }
 })
 
 $menu = New-Object System.Windows.Controls.ContextMenu
 $mi = New-Object System.Windows.Controls.MenuItem; $mi.Header = 'Set phone URL...'
-$mi.Add_Click({ $config.url = Ask-Url $config.url; Save-Config; $script:failures = 0 }); $menu.Items.Add($mi) | Out-Null
+$mi.Add_Click({ $config.url = Ask-Url $config.url; Save-Config; $script:failures = 0; $script:pending = $null }); $menu.Items.Add($mi) | Out-Null
 foreach ($o in 0.5, 0.7, 0.9) {
   $m = New-Object System.Windows.Controls.MenuItem; $m.Header = ('Opacity {0}%' -f [int]($o * 100)); $m.Tag = $o
   $m.Add_Click({ $config.opacity = [double]$this.Tag; $window.Opacity = [double]$this.Tag; Save-Config }); $menu.Items.Add($m) | Out-Null
