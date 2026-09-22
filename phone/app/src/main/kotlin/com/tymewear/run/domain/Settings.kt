@@ -11,6 +11,8 @@ data class Settings(
     val intervalsApiKey: String?,
     val idleStopMinutes: Int,
     val retentionDays: Int,
+    val lanOverlayEnabled: Boolean = false,
+    val lanToken: String? = null,
 ) {
     companion object {
         val DEFAULT = Settings(

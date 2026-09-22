@@ -30,6 +30,8 @@ class PrefsSettingsStore(context: Context) : SettingsStore {
             .putString("intervals_key", settings.intervalsApiKey ?: "")
             .putInt("idle_stop_min", settings.idleStopMinutes)
             .putInt("retention_days", settings.retentionDays)
+            .putBoolean("lan_overlay_enabled", settings.lanOverlayEnabled)
+            .putString("lan_token", settings.lanToken ?: "")
             .apply()
         state.value = settings
     }
@@ -45,6 +47,8 @@ class PrefsSettingsStore(context: Context) : SettingsStore {
             intervalsApiKey = prefs.getString("intervals_key", "")!!.ifBlank { null },
             idleStopMinutes = prefs.getInt("idle_stop_min", d.idleStopMinutes),
             retentionDays = prefs.getInt("retention_days", d.retentionDays),
+            lanOverlayEnabled = prefs.getBoolean("lan_overlay_enabled", d.lanOverlayEnabled),
+            lanToken = prefs.getString("lan_token", "")!!.ifBlank { null },
         )
     }
 }

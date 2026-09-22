@@ -15,6 +15,8 @@ class SettingsTest {
         assertEquals(90, d.retentionDays)
         assertEquals(null, d.intervalsApiKey)
         assertEquals(true, d.serviceEnabled)
+        assertEquals(false, d.lanOverlayEnabled)
+        assertEquals(null, d.lanToken)
     }
 
     @Test

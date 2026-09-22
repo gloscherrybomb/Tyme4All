@@ -182,6 +182,8 @@ fun SettingsScreen() {
                         intervalsApiKey = apiKey.ifBlank { null },
                         idleStopMinutes = idleI,
                         retentionDays = retentionI,
+                        lanOverlayEnabled = initial.lanOverlayEnabled,
+                        lanToken = initial.lanToken,
                     ),
                 )
             } else {

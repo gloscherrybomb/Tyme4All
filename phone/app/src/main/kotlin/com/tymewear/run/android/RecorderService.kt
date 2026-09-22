@@ -65,7 +65,7 @@ class RecorderService : Service() {
 
         if (relay == null) {
             try {
-                relay = RelayServer(Constants.RELAY_PORT, Graph.live, Graph.settings, Graph.sessions, version = BuildConfig.VERSION_NAME)
+                relay = RelayServer("127.0.0.1", Constants.RELAY_PORT, Graph.live, Graph.settings, Graph.sessions, version = BuildConfig.VERSION_NAME)
                     .also { it.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false) }
             } catch (e: java.io.IOException) {
                 Timber.e(e, "relay failed to bind")
@@ -101,7 +101,7 @@ class RecorderService : Service() {
             Graph.sessions.tick(now)?.let { Timber.i("Session closed: $it") }
             if (relay == null) {
                 try {
-                    relay = RelayServer(Constants.RELAY_PORT, Graph.live, Graph.settings, Graph.sessions, version = BuildConfig.VERSION_NAME)
+                    relay = RelayServer("127.0.0.1", Constants.RELAY_PORT, Graph.live, Graph.settings, Graph.sessions, version = BuildConfig.VERSION_NAME)
                         .also { it.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false) }
                 } catch (e: java.io.IOException) {
                     Timber.e(e, "relay failed to bind")
