@@ -33,6 +33,10 @@ class SyncEngine(private val api: IntervalsApi, private val store: SessionStore)
         val start = Instant.ofEpochMilli(meta.startMs)
         val found = api.listActivities(start.minusSeconds(86_400), start.plusSeconds(86_400)).firstOrNull { it.id == activityId }
             ?: throw IntervalsException(404, "activity $activityId not found near the session")
+        // The matcher drops Karoo rides (the Karoo records the Tyme* fields itself); a manual id must not bypass that.
+        if (found.deviceName?.contains("karoo", ignoreCase = true) == true) {
+            throw IntervalsException(400, "activity $activityId was recorded by a Karoo, which records breathing itself")
+        }
         Choice(found, null)
     }
 

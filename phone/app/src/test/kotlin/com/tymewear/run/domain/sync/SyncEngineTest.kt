@@ -5,6 +5,7 @@ import com.tymewear.run.domain.session.SessionEvent
 import com.tymewear.run.domain.session.SessionStore
 import java.time.Instant
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -124,6 +125,18 @@ class SyncEngineTest {
         val out = SyncEngine(api, store).syncTo(id, "i9", settings, startMs + 700_000)
         assertTrue(out is SyncOutcome.Synced)
         assertEquals("i9", api.lastPutId)
+    }
+
+    @Test fun `manual match to a Karoo activity fails without pushing`() {
+        val store = SessionStore(tmp.root); val id = session(store)
+        val api = FakeApi().apply {
+            streams = listOf(Stream("time", listOf(0.0)))
+            activities = listOf(ActivitySummary("k1", Instant.ofEpochMilli(startMs), "Ride", "Ride", "HAMMERHEAD", "Hammerhead Karoo 3", 600))
+        }
+        val out = SyncEngine(api, store).syncTo(id, "k1", settings, startMs + 700_000)
+        assertEquals(SyncOutcome.Failed("activity k1 was recorded by a Karoo, which records breathing itself"), out)
+        assertEquals("failed", store.meta(id)!!.syncState)
+        assertNull(api.lastPutId)
     }
 
     @Test fun `runner up activity is named in the sync message`() {
