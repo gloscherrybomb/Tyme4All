@@ -1,7 +1,7 @@
 # Strap-driven sessions and a TrainingPeaks Virtual overlay
 
 **Date:** 2026-09-22
-**Status:** Approved in discussion, awaiting spec review
+**Status:** Implemented 2026-09-22; hardware checks pending (phone README, First real session)
 **Extends:** `2026-09-03-tymewear-amazfit-design.md` (K-Breathe Run phone app and K-Breathe watch extension)
 **Related:** `TymewearKaroo` (writes the same Tymewear stream codes into the Karoo FIT)
 
