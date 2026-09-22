@@ -2,7 +2,7 @@ package com.tymewear.run.domain.sync
 
 import java.time.Instant
 
-data class ActivitySummary(val id: String, val startDate: Instant, val name: String?, val type: String?, val source: String?, val deviceName: String?)
+data class ActivitySummary(val id: String, val startDate: Instant, val name: String?, val type: String?, val source: String?, val deviceName: String?, val elapsedTimeS: Int? = null)
 data class Stream(val type: String, val data: List<Double?>, val custom: Boolean = false)
 data class UpdateStreamsResult(val updated: List<String>, val deleted: List<String>)
 class IntervalsException(val httpCode: Int, message: String) : Exception(message)

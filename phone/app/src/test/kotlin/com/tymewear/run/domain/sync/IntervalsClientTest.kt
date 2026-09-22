@@ -21,7 +21,7 @@ class IntervalsClientTest {
     @Test
     fun `lists activities with basic auth and utc window`() {
         server.enqueue(MockResponse().setBody("""[
-          {"id":"i100","start_date":"2026-09-03T07:10:05Z","name":"Morning Run","type":"Run","source":"ZEPP","device_name":"Amazfit Cheetah 2 Ultra"},
+          {"id":"i100","start_date":"2026-09-03T07:10:05Z","name":"Morning Run","type":"Run","source":"ZEPP","device_name":"Amazfit Cheetah 2 Ultra","elapsed_time":3725},
           {"id":"i99","start_date":"2026-09-02T18:00:00","name":null,"type":"Ride","source":"GARMIN","device_name":null}
         ]"""))
         val list = api.listActivities(Instant.parse("2026-09-03T05:00:00Z"), Instant.parse("2026-09-03T11:00:00Z"))
@@ -33,6 +33,8 @@ class IntervalsClientTest {
         assertEquals("Amazfit Cheetah 2 Ultra", list[0].deviceName)
         assertEquals(Instant.parse("2026-09-02T18:00:00Z"), list[1].startDate)
         assertNull(list[1].name)
+        assertEquals(3725, list[0].elapsedTimeS)
+        assertNull(list[1].elapsedTimeS)
     }
 
     @Test

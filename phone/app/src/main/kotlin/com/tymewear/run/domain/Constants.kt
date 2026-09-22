@@ -29,6 +29,6 @@ object Constants {
     const val MAX_SESSION_MS = 8 * 60 * 60 * 1000L
     const val SYNC_POLL_INTERVAL_MS = 2 * 60 * 1000L
     const val SYNC_GIVE_UP_MS = 6 * 60 * 60 * 1000L
-    const val MATCH_WINDOW_MS = 5 * 60 * 1000L
+    const val MIN_OVERLAP_MS = 5 * 60 * 1000L
     const val RETENTION_DAYS = 90
 }

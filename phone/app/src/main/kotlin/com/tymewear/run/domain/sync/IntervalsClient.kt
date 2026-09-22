@@ -16,6 +16,7 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -48,6 +49,7 @@ class IntervalsClient(
                 type = o.str("type"),
                 source = o.str("source"),
                 deviceName = o.str("device_name"),
+                elapsedTimeS = (o["elapsed_time"] as? JsonPrimitive)?.intOrNull,
             )
         }
     }

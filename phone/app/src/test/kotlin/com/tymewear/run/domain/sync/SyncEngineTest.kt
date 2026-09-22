@@ -59,7 +59,7 @@ class SyncEngineTest {
     @Test fun `syncs and records activity id`() {
         val store = SessionStore(tmp.root); val id = session(store)
         val api = FakeApi().apply {
-            activities = listOf(ActivitySummary("i1", Instant.ofEpochMilli(startMs + 3_000), "Run", "Run", "ZEPP", "Amazfit Cheetah 2 Ultra"))
+            activities = listOf(ActivitySummary("i1", Instant.ofEpochMilli(startMs + 3_000), "Run", "Run", "ZEPP", "Amazfit Cheetah 2 Ultra", 600))
             streams = listOf(Stream("time", listOf(0.0, 1.0, 2.0, 3.0)), Stream("heartrate", listOf(120.0, 121.0, 122.0, 123.0)))
         }
         val out = SyncEngine(api, store).sync(id, settings, startMs + 700_000)
@@ -76,7 +76,7 @@ class SyncEngineTest {
     @Test fun `failed when intervals rejects a stream`() {
         val store = SessionStore(tmp.root); val id = session(store)
         val api = FakeApi().apply {
-            activities = listOf(ActivitySummary("i1", Instant.ofEpochMilli(startMs), null, "Run", "ZEPP", null))
+            activities = listOf(ActivitySummary("i1", Instant.ofEpochMilli(startMs), null, "Run", "ZEPP", null, 600))
             streams = listOf(Stream("time", listOf(0.0, 1.0)))
             putResult = UpdateStreamsResult(StreamCodes.ALL - StreamCodes.MI, emptyList())
         }
@@ -100,7 +100,7 @@ class SyncEngineTest {
     @Test fun `unexpected exception becomes failed and does not propagate`() {
         val store = SessionStore(tmp.root); val id = session(store)
         val api = FakeApi().apply {
-            activities = listOf(ActivitySummary("i1", Instant.ofEpochMilli(startMs + 3_000), "Run", "Run", "ZEPP", "Amazfit Cheetah 2 Ultra"))
+            activities = listOf(ActivitySummary("i1", Instant.ofEpochMilli(startMs + 3_000), "Run", "Run", "ZEPP", "Amazfit Cheetah 2 Ultra", 600))
             failGetStreams = IllegalStateException("bad json")
         }
         val out = SyncEngine(api, store).sync(id, settings, startMs + 700_000)
@@ -120,9 +120,25 @@ class SyncEngineTest {
         val store = SessionStore(tmp.root); val id = session(store)
         val api = FakeApi().apply { streams = listOf(Stream("time", listOf(0.0))) }
         // activity start is needed for alignment: syncTo fetches it from listActivities by id
-        api.activities = listOf(ActivitySummary("i9", Instant.ofEpochMilli(startMs + 7_200_000 + 1), null, "Run", "ZEPP", null))
+        api.activities = listOf(ActivitySummary("i9", Instant.ofEpochMilli(startMs + 7_200_000 + 1), null, "Run", "ZEPP", null, 600))
         val out = SyncEngine(api, store).syncTo(id, "i9", settings, startMs + 700_000)
         assertTrue(out is SyncOutcome.Synced)
         assertEquals("i9", api.lastPutId)
+    }
+
+    @Test fun `runner up activity is named in the sync message`() {
+        val store = SessionStore(tmp.root); val id = session(store)
+        val api = FakeApi().apply {
+            activities = listOf(
+                ActivitySummary("tpv", Instant.ofEpochMilli(startMs), "Ride", "Ride", "TPV", null, 600),
+                ActivitySummary("amaz", Instant.ofEpochMilli(startMs + 60_000), "Run", "Run", "ZEPP", "Amazfit Cheetah 2 Ultra", 540),
+            )
+            streams = listOf(Stream("time", listOf(0.0, 1.0)))
+        }
+        val out = SyncEngine(api, store).sync(id, settings, startMs + 700_000)
+        assertTrue(out is SyncOutcome.Synced)
+        assertEquals("tpv", api.lastPutId)
+        assertEquals("pushed 7 streams to tpv; also overlapped amaz (Amazfit Cheetah 2 Ultra)", store.meta(id)!!.syncMessage)
+        assertEquals("Ride", (out as SyncOutcome.Synced).activityLabel)
     }
 }
