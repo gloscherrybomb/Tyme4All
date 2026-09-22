@@ -61,6 +61,14 @@ fun SessionsScreen() {
                     }
                 },
                 onMatchById = { matchDialogFor = session.id },
+                onDiscard = {
+                    scope.launch {
+                        withContext(Dispatchers.IO) {
+                            Graph.sessionStore.updateMeta(session.id) { it.copy(syncState = "discarded", syncMessage = "discarded by user", lastSyncAttemptMs = System.currentTimeMillis()) }
+                        }
+                        refresh()
+                    }
+                },
             )
         }
     }
@@ -85,7 +93,7 @@ fun SessionsScreen() {
 }
 
 @Composable
-private fun SessionRow(session: SessionMeta, onRetrySync: () -> Unit, onMatchById: () -> Unit) {
+private fun SessionRow(session: SessionMeta, onRetrySync: () -> Unit, onMatchById: () -> Unit, onDiscard: () -> Unit) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(session.id)
@@ -96,6 +104,9 @@ private fun SessionRow(session: SessionMeta, onRetrySync: () -> Unit, onMatchByI
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = onRetrySync) { Text("Retry sync") }
                 OutlinedButton(onClick = onMatchById) { Text("Match by id") }
+                if (session.endMs != null && session.syncState in setOf("pending", "unmatched", "failed")) {
+                    OutlinedButton(onClick = onDiscard) { Text("Discard") }
+                }
             }
         }
     }

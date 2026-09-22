@@ -12,7 +12,7 @@ data class SessionMeta(
     val id: String,
     val startMs: Long,
     val endMs: Long? = null,
-    val syncState: String = "pending",   // pending | synced | unmatched | failed | skipped
+    val syncState: String = "pending",   // pending | synced | unmatched | failed | skipped | discarded
     val activityId: String? = null,
     val syncMessage: String? = null,
     val lastSyncAttemptMs: Long? = null,
@@ -54,6 +54,14 @@ class SessionStore(private val root: File) {
     }
 
     fun events(id: String): List<SessionEvent> = SessionLog.read(logFile(id))
+
+    /** Marks every finished, still-pending session as discarded so the sync stops waiting for it.
+     *  The data is kept; "Retry sync" on the Sessions tab can still push it later. Returns the ids. */
+    fun discardPending(nowMs: Long): List<String> =
+        list().filter { it.endMs != null && it.syncState == "pending" }.map { m ->
+            updateMeta(m.id) { it.copy(syncState = "discarded", syncMessage = "discarded by user", lastSyncAttemptMs = nowMs) }
+            m.id
+        }
 
     fun prune(nowMs: Long, retentionDays: Int): Int {
         val cutoff = nowMs - retentionDays * 86_400_000L

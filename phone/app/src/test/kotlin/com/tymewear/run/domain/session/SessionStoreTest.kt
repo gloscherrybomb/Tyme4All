@@ -54,4 +54,23 @@ class SessionStoreTest {
         assertEquals(1, store.list().size)
         assertNull(store.meta(SessionStore.idFor(now - 100 * day)))
     }
+
+    @Test
+    fun `discardPending marks only finished pending sessions`() {
+        val store = SessionStore(tmp.root)
+        store.create(1_000, "strap").close(); store.finish(SessionStore.idFor(1_000), 100_000, "idle")          // pending, finished
+        store.create(200_000, "strap").close()                                                                  // still open
+        store.create(300_000, "strap").close(); store.finish(SessionStore.idFor(300_000), 400_000, "idle")
+        store.updateMeta(SessionStore.idFor(300_000)) { it.copy(syncState = "synced", activityId = "i1") }
+
+        val discarded = store.discardPending(nowMs = 500_000)
+
+        assertEquals(listOf(SessionStore.idFor(1_000)), discarded)
+        val m = store.meta(SessionStore.idFor(1_000))!!
+        assertEquals("discarded", m.syncState)
+        assertEquals("discarded by user", m.syncMessage)
+        assertEquals(500_000L, m.lastSyncAttemptMs)
+        assertEquals("pending", store.meta(SessionStore.idFor(200_000))!!.syncState)
+        assertEquals("synced", store.meta(SessionStore.idFor(300_000))!!.syncState)
+    }
 }

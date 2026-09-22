@@ -131,7 +131,7 @@ class RecorderService : Service() {
                 lastNotificationText = text
                 lastNotificationPostMs = now
                 (getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager)
-                    .notify(Notifications.ID_SERVICE, Notifications.serviceNotification(this, text))
+                    .notify(Notifications.ID_SERVICE, Notifications.serviceNotification(this, text, discardable = session == null && syncPending))
             }
 
             if (now - lastSyncMs >= 60_000) { lastSyncMs = now; runSyncPass(now) }

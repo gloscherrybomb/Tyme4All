@@ -26,7 +26,8 @@ object Notifications {
             mgr.createNotificationChannel(NotificationChannel(CHANNEL_SYNC, "Intervals.icu sync", NotificationManager.IMPORTANCE_DEFAULT))
     }
 
-    fun serviceNotification(ctx: Context, text: String): Notification =
+    /** [discardable] adds a "Discard" action that gives up on the sessions still waiting for an activity. */
+    fun serviceNotification(ctx: Context, text: String, discardable: Boolean = false): Notification =
         NotificationCompat.Builder(ctx, CHANNEL_SERVICE)
             .setContentTitle("K-Breathe Run")
             .setContentText(text)
@@ -34,6 +35,10 @@ object Notifications {
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setOngoing(true).setOnlyAlertOnce(true).setShowWhen(false)
             .setContentIntent(openApp(ctx))
+            .apply {
+                if (discardable) addAction(0, "Discard, no activity coming", PendingIntent.getBroadcast(
+                    ctx, 1, Intent(ctx, DiscardPendingReceiver::class.java).setAction(DiscardPendingReceiver.ACTION), PendingIntent.FLAG_IMMUTABLE))
+            }
             .build()
 
     fun synced(ctx: Context, sessionId: String, activityId: String, activityLabel: String) = post(ctx, sessionId.hashCode(),

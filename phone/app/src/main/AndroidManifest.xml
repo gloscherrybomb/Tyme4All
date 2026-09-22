@@ -46,5 +46,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <receiver android:name=".android.DiscardPendingReceiver" android:exported="false">
+            <intent-filter><action android:name="com.tymewear.run.DISCARD_PENDING" /></intent-filter>
+        </receiver>
     </application>
 </manifest>

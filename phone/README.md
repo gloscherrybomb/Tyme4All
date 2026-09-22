@@ -88,11 +88,12 @@ After a session ends, the app polls Intervals.icu every 2 minutes, for up to 6 h
 
 If two activities overlap the same session (for example a watch recording and a TPV recording of the same ride), the larger overlap gets the data and the other is named in the session's message; use **Match by id** to push to it as well. If the strap dropped out for more than 3 minutes mid-activity you get two sessions; both match the same activity and the second push carries the first session's data too, nothing is blanked.
 
-Session states, shown on the Sessions tab: `pending`, `synced`, `unmatched`, `failed`, `skipped`.
+Session states, shown on the Sessions tab: `pending`, `synced`, `unmatched`, `failed`, `skipped`, `discarded`.
 
 On the Sessions tab you can:
 - **Retry sync** — re-run the poll/match/push for a session.
 - **Match by id** — enter an Intervals.icu activity id by hand to force the match.
+- **Discard** — stop waiting for an activity that will never come (a strap test, a false start). The data is kept and **Retry sync** still works later.
 
 ## Strap pairing
 
@@ -115,7 +116,7 @@ from the Status tab) reverts to the previous always-on behaviour.
 | Notification | Meaning |
 |---|---|
 | K-Breathe Run: Recording since 13:48 · VE 72 L/min | The persistent service notification while a session is open; the VE refreshes every 30 s |
-| K-Breathe Run: Waiting for a matching Intervals.icu activity | Strap off, a finished session is still waiting for its activity to appear (up to 6 hours); the service stays running for that |
+| K-Breathe Run: Waiting for a matching Intervals.icu activity | Strap off, a finished session is still waiting for its activity to appear (up to 6 hours); the service stays running for that. Its **Discard, no activity coming** action gives up on those sessions at once, for example after just trying the strap on |
 | K-Breathe Run: Strap connected / Waiting for strap | The same notification when nothing is recording or pending |
 | Breathing data synced to Intervals.icu | Streams pushed; tap opens the activity |
 | Intervals.icu sync failed | Push failed; the text names the reason |
