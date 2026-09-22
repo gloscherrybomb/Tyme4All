@@ -49,6 +49,8 @@ class RecorderService : Service() {
         Graph.init(this)
         Graph.recorderRunning.value = true
         Notifications.ensureChannels(this)
+        // A recording notification left by a killed process must not outlive the session it described.
+        Notifications.clearRecording(this)
         Graph.sessions.recoverOnStartup(System.currentTimeMillis())
         connector = StrapConnector(this, Graph.live, Graph.sessions, Graph.settings, scope)
         lanRelay = LanRelayManager(this) { host, token ->

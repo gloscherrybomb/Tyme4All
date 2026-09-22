@@ -1,6 +1,6 @@
 # K-Breathe Run
 
-Android phone app that records breathing data from a Tymewear VitalPro strap during any activity and merges it into the matching Intervals.icu activity. It is the phone half of the K-Breathe project; the watch half is the Zepp OS extension in `../watch/`, and `../pc/` holds the Windows overlay for TrainingPeaks Virtual, and the design spec is at `../docs/superpowers/specs/2026-09-03-tymewear-amazfit-design.md`.
+Android phone app that records breathing data from a Tymewear VitalPro strap during any activity and merges it into the matching Intervals.icu activity. It is the phone half of the K-Breathe project; the watch half is the Zepp OS extension in `../watch/`, `../pc/` holds the Windows overlay for TrainingPeaks Virtual, and the design spec is at `../docs/superpowers/specs/2026-09-03-tymewear-amazfit-design.md`.
 
 ## What it does
 
@@ -129,7 +129,7 @@ browser on a tablet. **Regenerate token** on the Settings tab invalidates the ol
 
 ## Developer notes
 
-The relay is loopback-only (`127.0.0.1:41415`, no authentication) and can be exercised from a shell on the device:
+The relay is loopback-only (`127.0.0.1:41415`, no authentication) and can be exercised from a shell on the device. With the LAN overlay setting on, the same endpoints minus session control are also served on the Wi-Fi address with a token; see PC overlay.
 
 ```bash
 adb shell curl http://127.0.0.1:41415/health

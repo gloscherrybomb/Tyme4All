@@ -82,6 +82,7 @@ class RelayServerTest {
             val p = lan.listeningPort
             assertEquals(401, call("GET", "/live", p).first)
             assertEquals(401, call("GET", "/live?token=wrong", p).first)
+            assertEquals(401, call("GET", "/live", p, mapOf("Authorization" to "Bearer wrong")).first)
             assertEquals(200, call("GET", "/live?token=s3cret", p).first)
             assertEquals(200, call("GET", "/health", p, mapOf("Authorization" to "Bearer s3cret")).first)
             assertEquals(200, call("GET", "/overlay?token=s3cret", p).first)

@@ -48,9 +48,21 @@ class LanRelayManager(
 
     private fun register() {
         val req = NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_WIFI).build()
+        // Callbacks that stop() has already unregistered can still be delivered; each one checks
+        // it is still the registered callback before acting.
         val cb = object : ConnectivityManager.NetworkCallback() {
-            override fun onLinkPropertiesChanged(network: Network, lp: LinkProperties) { rebind(lp) }
-            override fun onLost(network: Network) { synchronized(this@LanRelayManager) { stopServer() } }
+            override fun onLinkPropertiesChanged(network: Network, lp: LinkProperties) {
+                synchronized(this@LanRelayManager) {
+                    if (callback !== this) return
+                    rebind(lp)
+                }
+            }
+            override fun onLost(network: Network) {
+                synchronized(this@LanRelayManager) {
+                    if (callback !== this) return
+                    stopServer()
+                }
+            }
         }
         cm.registerNetworkCallback(req, cb)
         callback = cb

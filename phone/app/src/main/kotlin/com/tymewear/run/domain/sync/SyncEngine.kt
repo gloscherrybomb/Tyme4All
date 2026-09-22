@@ -5,6 +5,8 @@ import com.tymewear.run.domain.session.SeriesBuilder
 import com.tymewear.run.domain.session.SessionMeta
 import com.tymewear.run.domain.session.SessionStore
 import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 sealed class SyncOutcome {
     data class Synced(val activityId: String, val activityLabel: String, val updated: List<String>) : SyncOutcome()
@@ -17,6 +19,10 @@ sealed class SyncOutcome {
 private data class Choice(val activity: ActivitySummary, val runnerUp: ActivitySummary?)
 
 class SyncEngine(private val api: IntervalsApi, private val store: SessionStore) {
+
+    /** Notification label: the activity's name, else its type and local start time ("Ride at 18:42"). */
+    private fun activityLabel(a: ActivitySummary): String =
+        a.name ?: "${a.type ?: "Activity"} at ${HH_MM.format(a.startDate.atZone(ZoneId.systemDefault()))}"
 
     fun sync(sessionId: String, settings: Settings, nowMs: Long): SyncOutcome = run(sessionId, settings, nowMs) { meta ->
         val start = Instant.ofEpochMilli(meta.startMs)
@@ -74,7 +80,7 @@ class SyncEngine(private val api: IntervalsApi, private val store: SessionStore)
                     choice.runnerUp?.let { append("; also overlapped ${it.id} (${it.deviceName ?: it.source ?: "unknown device"})") }
                 }
                 record("synced", msg, activity.id)
-                SyncOutcome.Synced(activity.id, activity.name ?: activity.id, result.updated)
+                SyncOutcome.Synced(activity.id, activityLabel(activity), result.updated)
             }
         } catch (e: IntervalsException) {
             record("failed", e.message ?: "intervals error"); SyncOutcome.Failed(e.message ?: "intervals error")
@@ -86,3 +92,5 @@ class SyncEngine(private val api: IntervalsApi, private val store: SessionStore)
         }
     }
 }
+
+private val HH_MM: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")

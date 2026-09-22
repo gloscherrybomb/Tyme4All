@@ -15,7 +15,8 @@ Intervals.icu merge happen on the phone; see `../phone/README.md`.
 5. In TPV, set the display mode to **borderless windowed** (or windowed), not exclusive
    fullscreen. Exclusive fullscreen hides every other window, including this one.
 
-The URL is kept in `%APPDATA%\KBreathe\overlay.json` together with the panel position and opacity.
+The URL is kept in `%APPDATA%\KBreathe\overlay.json` together with the panel position (`hasPos`, `x`, `y`;
+the panel opens top-right until it has been closed once) and opacity.
 
 ## Using it
 

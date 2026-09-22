@@ -108,7 +108,7 @@ When a watch recording and a TPV recording both overlap the same session, the la
 | Loopback | `127.0.0.1:41415` | none | always (watch side service) |
 | LAN | Wi-Fi interface address, port `41415` | `token` query parameter or `Authorization: Bearer` | setting **LAN overlay** is on |
 
-The LAN listener binds the current Wi-Fi IPv4 address, not `0.0.0.0`, so it is never exposed on mobile data. It is restarted when the Wi-Fi address changes (network callback) and stopped when Wi-Fi drops. Requests without a valid token get `401 {"error":"unauthorized"}`. `POST /session/start` and `/session/stop` are **not** served on the LAN listener (`404`); the overlay is display-only and nothing on the network may start or stop recording.
+The LAN listener binds the current Wi-Fi IPv4 address, not `0.0.0.0`, so it is never exposed on mobile data. It is restarted when the Wi-Fi address changes (network callback) and stopped when Wi-Fi drops. Requests without a valid token get `401 {"error":"unauthorized"}`. `POST /session/start` and `/session/stop` are **not** served on the LAN listener (`404`); the overlay is display-only and nothing on the network may start or stop recording. `/live` carries the live breathing values plus the configured zone thresholds and the resting/max heart and breathing rates, which the overlay needs for zone colours; nothing else (no API key, no session history).
 
 ### 6.2 Token and discovery
 
@@ -182,7 +182,7 @@ Target phone: Nothing Phone (Android 15 or newer, near-stock). Companion Device 
 | Strap removed before the activity has uploaded | Service keeps running until the session is synced, unmatched (6 h) or failed, then stops on presence. |
 | Strap worn without any activity | Session becomes `unmatched` after 6 hours, then pruned. Sessions shorter than 15 minutes do not notify (section 8a), to avoid noise from fitting the strap. |
 | Wi-Fi address changes mid-ride | LAN listener rebinds; the overlay's URL is stale. The overlay shows `phone?`; the runner re-copies the URL. Accepted for the first version. |
-| Token leaked on the home network | Reader sees breathing values only. Regenerate from the Status tab. |
+| Token leaked on the home network | Reader sees the live breathing values and the configured zone thresholds and resting/max heart and breathing rates (what `/live` carries for zone colours); nothing else. Regenerate from the Status tab. |
 | Overlay hidden by exclusive fullscreen TPV | Section 7.3 fallback. |
 | Two activities overlap one session | Section 5.2. |
 

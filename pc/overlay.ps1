@@ -8,11 +8,11 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, Sys
 
 $configDir  = Join-Path $env:APPDATA 'KBreathe'
 $configPath = Join-Path $configDir 'overlay.json'
-$config = @{ url = ''; x = -1; y = -1; opacity = 0.7 }
+$config = @{ url = ''; hasPos = $false; x = 0; y = 0; opacity = 0.7 }
 if (Test-Path $configPath) {
   try {
     $saved = Get-Content $configPath -Raw | ConvertFrom-Json
-    foreach ($k in 'url', 'x', 'y', 'opacity') { if ($null -ne $saved.$k) { $config[$k] = $saved.$k } }
+    foreach ($k in 'url', 'hasPos', 'x', 'y', 'opacity') { if ($null -ne $saved.$k) { $config[$k] = $saved.$k } }
   } catch { }
 }
 if ($Url) { $config.url = $Url }
@@ -61,7 +61,7 @@ $window = [Windows.Markup.XamlReader]::Load((New-Object System.Xml.XmlNodeReader
 $panel  = $window.FindName('Panel');  $dot  = $window.FindName('Dot');  $status = $window.FindName('Status')
 $veText = $window.FindName('Ve');     $zone = $window.FindName('Zone'); $row    = $window.FindName('Row')
 $window.Opacity = [double]$config.opacity
-if ([double]$config.x -ge 0) { $window.Left = [double]$config.x; $window.Top = [double]$config.y }
+if ([bool]$config.hasPos) { $window.Left = [double]$config.x; $window.Top = [double]$config.y }
 else {
   $wa = [System.Windows.SystemParameters]::WorkArea
   $window.Left = $wa.Right - $window.Width - 16; $window.Top = $wa.Top + 16
@@ -121,7 +121,7 @@ $q = New-Object System.Windows.Controls.MenuItem; $q.Header = 'Quit'; $q.Add_Cli
 $window.ContextMenu = $menu
 
 $window.Add_MouseLeftButtonDown({ $window.DragMove() })
-$window.Add_Closing({ $config.x = $window.Left; $config.y = $window.Top; Save-Config; $timer.Stop() })
+$window.Add_Closing({ $config.hasPos = $true; $config.x = $window.Left; $config.y = $window.Top; Save-Config; $timer.Stop() })
 
 $timer.Start()
 $window.ShowDialog() | Out-Null

@@ -139,6 +139,18 @@ class SyncEngineTest {
         assertNull(api.lastPutId)
     }
 
+    @Test fun `unnamed activity is labelled by type and local start time`() {
+        val store = SessionStore(tmp.root); val id = session(store)
+        val start = Instant.ofEpochMilli(startMs + 3_000)
+        val api = FakeApi().apply {
+            activities = listOf(ActivitySummary("i1", start, null, "Run", "ZEPP", "Amazfit Cheetah 2 Ultra", 600))
+            streams = listOf(Stream("time", listOf(0.0, 1.0)))
+        }
+        val out = SyncEngine(api, store).sync(id, settings, startMs + 700_000) as SyncOutcome.Synced
+        val hhmm = java.time.format.DateTimeFormatter.ofPattern("HH:mm").format(start.atZone(java.time.ZoneId.systemDefault()))
+        assertEquals("Run at $hhmm", out.activityLabel)
+    }
+
     @Test fun `runner up activity is named in the sync message`() {
         val store = SessionStore(tmp.root); val id = session(store)
         val api = FakeApi().apply {

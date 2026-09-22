@@ -185,12 +185,12 @@ fun SettingsScreen() {
             maxBr = maxBr.copy(error = maxBrd == null)
             restingHr = restingHr.copy(error = restingHrd == null)
             maxHr = maxHr.copy(error = maxHrd == null)
-            idleStopMinutes = idleStopMinutes.copy(error = idleI == null)
+            idleStopMinutes = idleStopMinutes.copy(error = idleI == null || idleI !in 1..480)
             retentionDays = retentionDays.copy(error = retentionI == null)
 
             if (vt1d != null && vt2d != null && topZ4d != null && vo2maxd != null &&
                 restingBrd != null && maxBrd != null && restingHrd != null && maxHrd != null &&
-                idleI != null && retentionI != null
+                idleI != null && idleI in 1..480 && retentionI != null
             ) {
                 Graph.settings.save(
                     Settings(
