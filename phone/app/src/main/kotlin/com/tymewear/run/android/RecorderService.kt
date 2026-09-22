@@ -17,6 +17,7 @@ import com.tymewear.run.domain.sync.SyncEngine
 import com.tymewear.run.domain.sync.SyncOutcome
 import com.tymewear.run.domain.sync.SyncScheduler
 import fi.iki.elonen.NanoHTTPD
+import java.time.ZoneId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -27,7 +28,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import timber.log.Timber
-import java.time.ZoneId
 
 class RecorderService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -38,6 +38,7 @@ class RecorderService : Service() {
     private var housekeepingJob: Job? = null
     private var lastNotificationText: String? = null
     private var recordingShownFor: String? = null
+    private var recordingStartMs = 0L
     private var lastRecordingPostMs = 0L
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -131,9 +132,9 @@ class RecorderService : Service() {
             if (session == null) {
                 if (recordingShownFor != null) { Notifications.clearRecording(this); recordingShownFor = null }
             } else if (session != recordingShownFor || now - lastRecordingPostMs >= NotificationPolicy.RECORDING_REFRESH_MS) {
-                val startMs = Graph.sessionStore.meta(session)?.startMs ?: now
+                if (session != recordingShownFor) recordingStartMs = Graph.sessionStore.meta(session)?.startMs ?: now
                 val ve = Graph.live.payload(Graph.settings.load(), now).ve
-                Notifications.recording(this, NotificationPolicy.recordingBody(startMs, ve, ZoneId.systemDefault()))
+                Notifications.recording(this, NotificationPolicy.recordingBody(recordingStartMs, ve, ZoneId.systemDefault()))
                 recordingShownFor = session
                 lastRecordingPostMs = now
             }
