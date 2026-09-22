@@ -10,7 +10,6 @@ import com.tymewear.run.BuildConfig
 import com.tymewear.run.domain.Constants
 import com.tymewear.run.domain.NotificationPolicy
 import com.tymewear.run.domain.ServiceLifecycle
-import com.tymewear.run.domain.StrapStatus
 import com.tymewear.run.domain.relay.RelayServer
 import com.tymewear.run.domain.sync.IntervalsClient
 import com.tymewear.run.domain.sync.SyncEngine
@@ -40,7 +39,7 @@ class RecorderService : Service() {
     private var lastNotificationText: String? = null
     private var recordingShownFor: String? = null
     private var recordingStartMs = 0L
-    private var lastRecordingPostMs = 0L
+    private var lastNotificationPostMs = 0L
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -49,8 +48,6 @@ class RecorderService : Service() {
         Graph.init(this)
         Graph.recorderRunning.value = true
         Notifications.ensureChannels(this)
-        // A recording notification left by a killed process must not outlive the session it described.
-        Notifications.clearRecording(this)
         Graph.sessions.recoverOnStartup(System.currentTimeMillis())
         connector = StrapConnector(this, Graph.live, Graph.sessions, Graph.settings, scope)
         lanRelay = LanRelayManager(this) { host, token ->
@@ -118,33 +115,22 @@ class RecorderService : Service() {
             }
             val status = Graph.live.status(now)
             val session = Graph.sessions.activeSessionId
-            val text = buildString {
-                append(
-                    when (status) {
-                        StrapStatus.CONNECTED -> "Strap connected"
-                        StrapStatus.STALE -> "Strap data stale"
-                        StrapStatus.DISCONNECTED -> "Waiting for strap"
-                        StrapStatus.OFF -> "Service off"
-                    }
-                )
-                if (session != null) append(" · recording ").append(session)
-                if (relay == null) append(" · relay down")
+            // One persistent notification: strap state normally, recording state while a session is
+            // open. The session start is read from disk once per session; the VE refreshes every 30 s.
+            if (session != null && session != recordingShownFor) {
+                recordingStartMs = withContext(Dispatchers.IO) { Graph.sessionStore.meta(session)?.startMs } ?: now
             }
-            if (text != lastNotificationText) {
+            recordingShownFor = session
+            val ve = if (session != null) Graph.live.payload(Graph.settings.load(), now).ve else null
+            val text = NotificationPolicy.serviceText(status, if (session != null) recordingStartMs else null, ve, relay == null, ZoneId.systemDefault())
+            // While recording, only the VE figure changes tick to tick; hold those updates to one per 30 s.
+            val veChurn = session != null && lastNotificationText?.startsWith("Recording") == true &&
+                now - lastNotificationPostMs < NotificationPolicy.RECORDING_REFRESH_MS
+            if (text != lastNotificationText && !veChurn) {
                 lastNotificationText = text
+                lastNotificationPostMs = now
                 (getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager)
                     .notify(Notifications.ID_SERVICE, Notifications.serviceNotification(this, text))
-            }
-
-            // Recording notification: shown while a session is open, body refreshed at most every 30 s.
-            if (session == null) {
-                if (recordingShownFor != null) { Notifications.clearRecording(this); recordingShownFor = null }
-            } else if (session != recordingShownFor || now - lastRecordingPostMs >= NotificationPolicy.RECORDING_REFRESH_MS) {
-                if (session != recordingShownFor) recordingStartMs = Graph.sessionStore.meta(session)?.startMs ?: now
-                val ve = Graph.live.payload(Graph.settings.load(), now).ve
-                Notifications.recording(this, NotificationPolicy.recordingBody(recordingStartMs, ve, ZoneId.systemDefault()))
-                recordingShownFor = session
-                lastRecordingPostMs = now
             }
 
             if (now - lastSyncMs >= 60_000) { lastSyncMs = now; runSyncPass(now) }
@@ -192,7 +178,6 @@ class RecorderService : Service() {
         connector.stop()
         lanRelay.stop()
         relay?.stop(); relay = null
-        Notifications.clearRecording(this)
         scope.cancel()
         Graph.recorderRunning.value = false
         super.onDestroy()

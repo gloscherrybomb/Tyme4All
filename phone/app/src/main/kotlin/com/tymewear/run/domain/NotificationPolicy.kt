@@ -17,9 +17,21 @@ object NotificationPolicy {
         return end - meta.startMs >= UNMATCHED_MIN_MS
     }
 
-    fun recordingBody(startMs: Long, ve: Double?, zone: ZoneId): String {
-        val time = DateTimeFormatter.ofPattern("HH:mm").withZone(zone).format(Instant.ofEpochMilli(startMs))
-        val veText = ve?.roundToInt()?.toString() ?: "--"
-        return "Since $time · VE $veText L/min"
+    /**
+     * Body of the single persistent service notification. While a session is open it carries the
+     * recording state (start time and live VE); otherwise it reports the strap connection.
+     */
+    fun serviceText(status: StrapStatus, recordingStartMs: Long?, ve: Double?, relayDown: Boolean, zone: ZoneId): String {
+        val base = if (recordingStartMs != null) {
+            val time = DateTimeFormatter.ofPattern("HH:mm").withZone(zone).format(Instant.ofEpochMilli(recordingStartMs))
+            val veText = ve?.roundToInt()?.toString() ?: "--"
+            "Recording since $time · VE $veText L/min"
+        } else when (status) {
+            StrapStatus.CONNECTED -> "Strap connected"
+            StrapStatus.STALE -> "Strap data stale"
+            StrapStatus.DISCONNECTED -> "Waiting for strap"
+            StrapStatus.OFF -> "Service off"
+        }
+        return if (relayDown) "$base · relay down" else base
     }
 }

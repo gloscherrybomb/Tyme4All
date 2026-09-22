@@ -55,8 +55,8 @@ The service is not started on boot; after a phone reboot, open the app once to s
 
 ## Sessions
 
-Put the strap on: the first breath packet opens a session, and you get a **Recording breathing
-data** notification. Take it off (or stop breathing into it): after 3 minutes without breathing
+Put the strap on: the first breath packet opens a session, and the app's persistent notification
+changes to **Recording since HH:MM · VE …**. Take it off (or stop breathing into it): after 3 minutes without breathing
 data the session closes and the notification disappears. Settings tab, "Stop session after no
 breathing data for" changes the 3 minutes. A session also closes at 8 hours.
 
@@ -114,7 +114,7 @@ from the Status tab) reverts to the previous always-on behaviour.
 
 | Notification | Meaning |
 |---|---|
-| Recording breathing data | A session is open; the body shows the start time and current VE |
+| K-Breathe Run: Recording since 13:48 · VE 72 L/min | The persistent service notification while a session is open; the VE refreshes every 30 s. Otherwise it reads "Strap connected" or "Waiting for strap" |
 | Breathing data synced to Intervals.icu | Streams pushed; tap opens the activity |
 | Intervals.icu sync failed | Push failed; the text names the reason |
 | No Intervals.icu activity found for a breathing session | No overlapping activity after 6 hours (only for sessions of 15 minutes or more); match by hand on the Sessions tab |
@@ -144,7 +144,7 @@ This checklist exercises the app end to end against the live Intervals.icu API. 
 
 1. **Create the custom streams in Intervals.icu**, if you haven't already under First-time setup: open any activity → Charts → Custom Streams → Add Stream, and create the seven codes and units listed above (or copy them from the Settings tab's Copy codes button).
 2. **Record a session.** Pair the strap on the Status tab, then swipe the app away. Put the strap
-   on: within about two minutes the "Recording breathing data" notification should appear without
+   on: within about two minutes the "Recording since …" notification should appear without
    opening the app. Start an activity on any device that syncs to Intervals.icu (the Amazfit
    watch, TrainingPeaks Virtual, a Karoo). Ride or run for at least 6 minutes, stop the activity,
    take the strap off. About 3 minutes later the notification disappears. Within a few minutes

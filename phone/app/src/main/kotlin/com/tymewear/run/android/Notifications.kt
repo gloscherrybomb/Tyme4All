@@ -11,15 +11,17 @@ import androidx.core.app.NotificationCompat
 import com.tymewear.run.android.ui.MainActivity
 
 object Notifications {
-    const val CHANNEL_SERVICE = "kbreathe_service"
+    /** Low importance: status bar icon, no sound. The original minimum-importance channel hid the icon. */
+    const val CHANNEL_SERVICE = "kbreathe_service_v2"
+    private const val CHANNEL_SERVICE_V1 = "kbreathe_service"
     const val CHANNEL_SYNC = "kbreathe_sync"
     const val ID_SERVICE = 1
-    const val ID_RECORDING = 2
 
     fun ensureChannels(ctx: Context) {
         val mgr = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (mgr.getNotificationChannel(CHANNEL_SERVICE_V1) != null) mgr.deleteNotificationChannel(CHANNEL_SERVICE_V1)
         if (mgr.getNotificationChannel(CHANNEL_SERVICE) == null)
-            mgr.createNotificationChannel(NotificationChannel(CHANNEL_SERVICE, "Strap connection", NotificationManager.IMPORTANCE_MIN).apply { setShowBadge(false) })
+            mgr.createNotificationChannel(NotificationChannel(CHANNEL_SERVICE, "Strap and recording", NotificationManager.IMPORTANCE_LOW).apply { setShowBadge(false) })
         if (mgr.getNotificationChannel(CHANNEL_SYNC) == null)
             mgr.createNotificationChannel(NotificationChannel(CHANNEL_SYNC, "Intervals.icu sync", NotificationManager.IMPORTANCE_DEFAULT))
     }
@@ -30,21 +32,9 @@ object Notifications {
             .setContentText(text)
             .setSmallIcon(android.R.drawable.stat_notify_sync_noanim)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setOngoing(true).setShowWhen(false)
-            .setContentIntent(openApp(ctx))
-            .build()
-
-    fun recording(ctx: Context, body: String) = post(ctx, ID_RECORDING,
-        NotificationCompat.Builder(ctx, CHANNEL_SYNC)
-            .setContentTitle("Recording breathing data")
-            .setContentText(body)
-            .setSmallIcon(android.R.drawable.stat_notify_sync_noanim)
             .setOngoing(true).setOnlyAlertOnce(true).setShowWhen(false)
             .setContentIntent(openApp(ctx))
-            .build())
-
-    fun clearRecording(ctx: Context) =
-        (ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager).cancel(ID_RECORDING)
+            .build()
 
     fun synced(ctx: Context, sessionId: String, activityId: String, activityLabel: String) = post(ctx, sessionId.hashCode(),
         NotificationCompat.Builder(ctx, CHANNEL_SYNC)
