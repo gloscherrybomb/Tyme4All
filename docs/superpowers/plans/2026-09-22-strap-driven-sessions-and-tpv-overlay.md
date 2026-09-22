@@ -624,22 +624,31 @@ object ActivityMatcher {
 }
 ```
 
-- [ ] **Step 7: SyncEngine choice, label and message**
+- [ ] **Step 7: Replace SyncEngine.kt in full**
 
-In `SyncEngine.kt`:
+Replace the whole of `phone/app/src/main/kotlin/com/tymewear/run/domain/sync/SyncEngine.kt` with:
 
-Change `Synced`:
 ```kotlin
+package com.tymewear.run.domain.sync
+
+import com.tymewear.run.domain.Settings
+import com.tymewear.run.domain.session.SeriesBuilder
+import com.tymewear.run.domain.session.SessionMeta
+import com.tymewear.run.domain.session.SessionStore
+import java.time.Instant
+
+sealed class SyncOutcome {
     data class Synced(val activityId: String, val activityLabel: String, val updated: List<String>) : SyncOutcome()
-```
+    data object NotYet : SyncOutcome()
+    data class Skipped(val reason: String) : SyncOutcome()
+    data class Failed(val message: String) : SyncOutcome()
+}
 
-Add a private choice type after the imports:
-```kotlin
+/** The activity to push to, and the next-best overlapping activity if there was one. */
 private data class Choice(val activity: ActivitySummary, val runnerUp: ActivitySummary?)
-```
 
-Replace `sync` and `syncTo`:
-```kotlin
+class SyncEngine(private val api: IntervalsApi, private val store: SessionStore) {
+
     fun sync(sessionId: String, settings: Settings, nowMs: Long): SyncOutcome = run(sessionId, settings, nowMs) { meta ->
         val start = Instant.ofEpochMilli(meta.startMs)
         val end = Instant.ofEpochMilli(meta.endMs!!)
@@ -657,10 +666,17 @@ Replace `sync` and `syncTo`:
             ?: throw IntervalsException(404, "activity $activityId not found near the session")
         Choice(found, null)
     }
-```
 
-Change the `run` signature to `choose: (SessionMeta) -> Choice?` and inside the `try` replace from `val activity = choose(meta) ?: run { ... }` through the `record("synced", ...)` branch with:
-```kotlin
+    private fun run(sessionId: String, settings: Settings, nowMs: Long, choose: (SessionMeta) -> Choice?): SyncOutcome {
+        val meta = store.meta(sessionId) ?: return SyncOutcome.Failed("unknown session")
+        fun record(state: String, msg: String, activityId: String? = meta.activityId) =
+            store.updateMeta(sessionId) { it.copy(syncState = state, syncMessage = msg, lastSyncAttemptMs = nowMs, activityId = activityId) }
+
+        if (settings.intervalsApiKey.isNullOrBlank()) { record("skipped", "no api key"); return SyncOutcome.Skipped("no api key") }
+        val end = meta.endMs ?: run { record("pending", "session still open"); return SyncOutcome.NotYet }
+        if (end - meta.startMs < 60_000) { record("skipped", "session shorter than 60 s"); return SyncOutcome.Skipped("session shorter than 60 s") }
+
+        return try {
             val choice = choose(meta) ?: run { record("pending", "no overlapping activity yet"); return SyncOutcome.NotYet }
             val activity = choice.activity
             val streams = api.getStreams(activity.id, listOf("time", "heartrate"))
@@ -682,6 +698,16 @@ Change the `run` signature to `choose: (SessionMeta) -> Choice?` and inside the 
                 record("synced", msg, activity.id)
                 SyncOutcome.Synced(activity.id, activity.name ?: activity.id, result.updated)
             }
+        } catch (e: IntervalsException) {
+            record("failed", e.message ?: "intervals error"); SyncOutcome.Failed(e.message ?: "intervals error")
+        } catch (e: java.io.IOException) {
+            record("pending", "network: ${e.message}"); SyncOutcome.NotYet
+        } catch (e: Exception) {
+            val msg = e.message ?: e::class.simpleName ?: "unknown error"
+            record("failed", msg); SyncOutcome.Failed(msg)
+        }
+    }
+}
 ```
 
 - [ ] **Step 8: Fix the one Android call site**
@@ -953,37 +979,117 @@ Change `synced` to take the label:
 
 - [ ] **Step 6: RecorderService changes**
 
-Add fields:
+Add these imports to `RecorderService.kt`:
+```kotlin
+import com.tymewear.run.domain.NotificationPolicy
+import java.time.ZoneId
+```
+Add these two fields next to `lastNotificationText`:
 ```kotlin
     private var recordingShownFor: String? = null
     private var lastRecordingPostMs = 0L
 ```
-In `housekeeping()`, right after the block that posts the service notification (after `if (text != lastNotificationText) { ... }`), add:
+Replace the whole `housekeeping()` function with:
 ```kotlin
+    private suspend fun housekeeping() {
+        var lastSyncMs = 0L
+        while (scope.isActive) {
+            val now = System.currentTimeMillis()
+            Graph.sessions.tick(now)?.let { Timber.i("Session closed: $it") }
+            if (relay == null) {
+                try {
+                    relay = RelayServer(Constants.RELAY_PORT, Graph.live, Graph.settings, Graph.sessions, version = BuildConfig.VERSION_NAME)
+                        .also { it.start(NanoHTTPD.SOCKET_READ_TIMEOUT, false) }
+                } catch (e: java.io.IOException) {
+                    Timber.e(e, "relay failed to bind")
+                    relay = null
+                }
+            }
+            val status = Graph.live.status(now)
+            val session = Graph.sessions.activeSessionId
+            val text = buildString {
+                append(
+                    when (status) {
+                        StrapStatus.CONNECTED -> "Strap connected"
+                        StrapStatus.STALE -> "Strap data stale"
+                        StrapStatus.DISCONNECTED -> "Waiting for strap"
+                        StrapStatus.OFF -> "Service off"
+                    }
+                )
+                if (session != null) append(" · recording ").append(session)
+                if (relay == null) append(" · relay down")
+            }
+            if (text != lastNotificationText) {
+                lastNotificationText = text
+                (getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager)
+                    .notify(Notifications.ID_SERVICE, Notifications.serviceNotification(this, text))
+            }
+
+            // Recording notification: shown while a session is open, body refreshed at most every 30 s.
             if (session == null) {
                 if (recordingShownFor != null) { Notifications.clearRecording(this); recordingShownFor = null }
-            } else if (session != recordingShownFor || now - lastRecordingPostMs >= com.tymewear.run.domain.NotificationPolicy.RECORDING_REFRESH_MS) {
+            } else if (session != recordingShownFor || now - lastRecordingPostMs >= NotificationPolicy.RECORDING_REFRESH_MS) {
                 val startMs = Graph.sessionStore.meta(session)?.startMs ?: now
                 val ve = Graph.live.payload(Graph.settings.load(), now).ve
-                Notifications.recording(this, com.tymewear.run.domain.NotificationPolicy.recordingBody(startMs, ve, java.time.ZoneId.systemDefault()))
+                Notifications.recording(this, NotificationPolicy.recordingBody(startMs, ve, ZoneId.systemDefault()))
                 recordingShownFor = session
                 lastRecordingPostMs = now
             }
-```
-(Or add the imports `com.tymewear.run.domain.NotificationPolicy` and `java.time.ZoneId` and drop the qualifiers.)
 
-In `runSyncPass` replace the expired loop body:
+            if (now - lastSyncMs >= 60_000) { lastSyncMs = now; runSyncPass(now) }
+            if (now - lastPruneMs >= 86_400_000) { lastPruneMs = now; Graph.sessionStore.prune(now, Graph.settings.load().retentionDays) }
+
+            val settings = Graph.settings.load()
+            if (ServiceLifecycle.shouldStop(Graph.strapPresence, session != null, settings.serviceEnabled)) {
+                Timber.i("Stopping service: presence=${Graph.strapPresence}, session=$session, serviceEnabled=${settings.serviceEnabled}")
+                stopSelf()
+                return
+            }
+
+            delay(10_000)
+        }
+    }
+```
+(Task 5 later changes the `RelayServer(...)` construction inside it to the host form; leave it as above for now.)
+
+Replace the whole `runSyncPass()` function with:
 ```kotlin
+    private suspend fun runSyncPass(now: Long) = withContext(Dispatchers.IO) {
+        try {
+            val settings = Graph.settings.load()
+            val metas = Graph.sessionStore.list()
             for (m in SyncScheduler.expired(metas, now)) {
                 Graph.sessionStore.updateMeta(m.id) { it.copy(syncState = "unmatched", syncMessage = "no Intervals.icu activity overlapped this session within 6 hours") }
                 if (NotificationPolicy.notifyUnmatched(m)) Notifications.unmatched(this@RecorderService, m.id)
             }
-```
-and the synced branch:
-```kotlin
+            val key = settings.intervalsApiKey ?: return@withContext
+            val engine = SyncEngine(IntervalsClient(key), Graph.sessionStore)
+            for (m in SyncScheduler.due(metas, now)) {
+                try {
+                    when (val out = engine.sync(m.id, settings, now)) {
                         is SyncOutcome.Synced -> Notifications.synced(this@RecorderService, m.id, out.activityId, out.activityLabel)
+                        is SyncOutcome.Failed -> Notifications.syncFailed(this@RecorderService, m.id, out.message)
+                        else -> {}
+                    }
+                } catch (e: Exception) {
+                    Timber.w(e, "sync pass failed")
+                }
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "sync pass failed")
+        }
+    }
 ```
-In `onDestroy()` add `Notifications.clearRecording(this)` before `scope.cancel()`.
+Replace `onDestroy()` with:
+```kotlin
+    override fun onDestroy() {
+        connector.stop()
+        relay?.stop(); relay = null
+        Notifications.clearRecording(this)
+        scope.cancel()
+        super.onDestroy()
+    }
+```
 
 - [ ] **Step 7: Build and test**
 
