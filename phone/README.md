@@ -18,7 +18,7 @@ It does not produce a FIT file, does not connect to a heart rate sensor, and doe
 - Android device, minSdk 26.
 - Tymewear VitalPro strap.
 - An Intervals.icu account with an active **Supporter** subscription (required for custom stream upload).
-- Something recording your run to Intervals.icu — normally the Amazfit watch via the Zepp app, but any device whose activities land on Intervals.icu works.
+- Something recording your activity to Intervals.icu — normally the Amazfit watch via the Zepp app, but any device whose activities land on Intervals.icu works.
 
 ## Build and install
 
