@@ -25,8 +25,8 @@ the panel opens top-right until it has been closed once) and opacity.
 - The dot is green when the strap is connected, amber when data is stale, grey when the strap is
   disconnected or the service is off, and red with `phone?` when the phone cannot be reached.
   After five failed polls the panel goes grey.
-- The background colour is the current VE zone: grey (no zone), teal Endurance, blue VT1, amber VT2,
-  orange Top Z4, red VO2Max.
+- The background colour is the current VE zone: grey (no zone), teal Z1, blue Z2, amber Z3,
+  orange Z4, red Z5.
 - There is no mobilization index on the overlay; MI needs heart rate, which the phone does not have
   live. It is in Intervals.icu after the sync.
 

@@ -16,6 +16,9 @@ data class SessionMeta(
     val activityId: String? = null,
     val syncMessage: String? = null,
     val lastSyncAttemptMs: Long? = null,
+    val tymewearState: String? = null,   // null: not applicable | pending | synced | failed | skipped
+    val tymewearMessage: String? = null,
+    val tymewearAttemptMs: Long? = null,
 )
 
 class SessionStore(private val root: File) {

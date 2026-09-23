@@ -28,7 +28,7 @@ function Ask-Url([string]$current) {
 if (-not $config.url) { $config.url = Ask-Url ''; if (-not $config.url) { exit }; Save-Config }
 
 $zoneColors = '#424242', '#4db6ac', '#0277bd', '#f57f17', '#ef6c00', '#c62828'
-$zoneNames  = '--', 'Endurance', 'VT1', 'VT2', 'Top Z4', 'VO2Max'
+$zoneNames  = '--', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5'
 
 [xml]$xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"

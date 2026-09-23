@@ -15,6 +15,7 @@ import com.tymewear.run.domain.sync.IntervalsClient
 import com.tymewear.run.domain.sync.SyncEngine
 import com.tymewear.run.domain.sync.SyncOutcome
 import com.tymewear.run.domain.sync.SyncScheduler
+import com.tymewear.run.domain.tymewear.TymewearOutcome
 import fi.iki.elonen.NanoHTTPD
 import java.time.ZoneId
 import kotlinx.coroutines.CoroutineScope
@@ -122,7 +123,10 @@ class RecorderService : Service() {
             }
             recordingShownFor = session
             val ve = if (session != null) Graph.live.payload(Graph.settings.load(), now).ve else null
-            val syncPending = SyncScheduler.anyPending(withContext(Dispatchers.IO) { Graph.sessionStore.list() }, now)
+            val metas = withContext(Dispatchers.IO) { Graph.sessionStore.list() }
+            // Intervals.icu waits drive the text and the Discard action; a pending Tymewear upload also keeps the service alive.
+            val syncPending = SyncScheduler.anyPending(metas, now)
+            val keepAlive = SyncScheduler.anyPending(metas, now, tymewear = Graph.settings.load().tymewearActive)
             val text = NotificationPolicy.serviceText(status, if (session != null) recordingStartMs else null, ve, syncPending, relay == null, ZoneId.systemDefault())
             // While recording, only the VE figure changes tick to tick; hold those updates to one per 30 s.
             val veChurn = session != null && lastNotificationText?.startsWith("Recording") == true &&
@@ -138,8 +142,8 @@ class RecorderService : Service() {
             if (now - lastPruneMs >= 86_400_000) { lastPruneMs = now; Graph.sessionStore.prune(now, Graph.settings.load().retentionDays) }
 
             val settings = Graph.settings.load()
-            if (ServiceLifecycle.shouldStop(Graph.strapPresence, session != null, settings.serviceEnabled, syncPending)) {
-                Timber.i("Stopping service: presence=${Graph.strapPresence}, session=$session, serviceEnabled=${settings.serviceEnabled}, syncPending=$syncPending")
+            if (ServiceLifecycle.shouldStop(Graph.strapPresence, session != null, settings.serviceEnabled, keepAlive)) {
+                Timber.i("Stopping service: presence=${Graph.strapPresence}, session=$session, serviceEnabled=${settings.serviceEnabled}, syncPending=$keepAlive")
                 stopSelf()
                 return
             }
@@ -156,17 +160,36 @@ class RecorderService : Service() {
                 Graph.sessionStore.updateMeta(m.id) { it.copy(syncState = "unmatched", syncMessage = "no Intervals.icu activity overlapped this session within 6 hours") }
                 if (NotificationPolicy.notifyUnmatched(m)) Notifications.unmatched(this@RecorderService, m.id)
             }
+            // Runs whether or not Tymewear is on (or a key is set), so a session does not stay pending after a sign-out or refusal.
+            for (m in SyncScheduler.expiredTymewear(metas, now)) {
+                Graph.sessionStore.updateMeta(m.id) { it.copy(tymewearState = "failed", tymewearMessage = "Tymewear never showed the activity", tymewearAttemptMs = now) }
+            }
             val key = settings.intervalsApiKey ?: return@withContext
-            val engine = SyncEngine(IntervalsClient(key), Graph.sessionStore)
+            // The Tymewear step is present only while signed in, switched on and not refused; a refusal stops it (TymewearAccess).
+            val engine = TymewearAccess.engine(this@RecorderService, IntervalsClient(key), settings)
             for (m in SyncScheduler.due(metas, now)) {
                 try {
                     when (val out = engine.sync(m.id, settings, now)) {
-                        is SyncOutcome.Synced -> Notifications.synced(this@RecorderService, m.id, out.activityId, out.activityLabel)
+                        is SyncOutcome.Synced -> Notifications.synced(this@RecorderService, m.id, out.activityId, out.activityLabel, out.tymewear)
                         is SyncOutcome.Failed -> Notifications.syncFailed(this@RecorderService, m.id, out.message)
                         else -> {}
                     }
                 } catch (e: Exception) {
                     Timber.w(e, "sync pass failed")
+                }
+            }
+            if (settings.tymewearActive) {
+                // Re-read: the loop above may have just synced sessions and set their Tymewear state.
+                val after = Graph.sessionStore.list()
+                for (m in SyncScheduler.dueTymewear(after, now)) {
+                    if (!Graph.settings.load().tymewearActive) break
+                    try {
+                        if (engine.syncTymewear(m.id, settings, now) == TymewearOutcome.Uploaded) {
+                            Notifications.tymewearUploaded(this@RecorderService, m.id, "Intervals.icu activity ${m.activityId}")
+                        }
+                    } catch (e: Exception) {
+                        Timber.w("Tymewear retry failed: ${e.javaClass.simpleName}")
+                    }
                 }
             }
         } catch (e: Exception) {

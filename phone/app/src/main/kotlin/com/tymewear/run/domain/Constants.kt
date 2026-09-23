@@ -1,10 +1,11 @@
 package com.tymewear.run.domain
 
 object Constants {
-    const val DEFAULT_VT1 = 73.0
-    const val DEFAULT_VT2 = 96.0
-    const val DEFAULT_TOP_Z4 = 112.0
-    const val DEFAULT_VO2MAX = 130.0
+    const val DEFAULT_ENDURANCE = 73.0
+    const val DEFAULT_VT1 = 96.0
+    const val DEFAULT_VT2 = 112.0
+    const val DEFAULT_TOP_Z4 = 130.0
+    const val DEFAULT_VO2MAX = 180.0
 
     const val DEFAULT_RESTING_BR = 12.0
     const val DEFAULT_MAX_BR = 55.0

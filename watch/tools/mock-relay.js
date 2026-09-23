@@ -4,15 +4,15 @@ const PORT = Number(process.env.MOCK_RELAY_PORT) || 41415
 
 const started = Date.now()
 let sessionId = null
-const thresholds = { vt1: 73, vt2: 96, topZ4: 112, vo2max: 130 }
+const thresholds = { endurance: 73, vt1: 96, vt2: 112, topZ4: 130, vo2max: 180 }
 const reserve = { restingBr: 12, maxBr: 55, restingHr: 60, maxHr: 190 }
 
 function zoneFor(ve) {
   if (ve <= 0) return 0
-  if (ve < thresholds.vt1) return 1
-  if (ve < thresholds.vt2) return 2
-  if (ve < thresholds.topZ4) return 3
-  if (ve < thresholds.vo2max) return 4
+  if (ve < thresholds.endurance) return 1
+  if (ve < thresholds.vt1) return 2
+  if (ve < thresholds.vt2) return 3
+  if (ve < thresholds.topZ4) return 4
   return 5
 }
 

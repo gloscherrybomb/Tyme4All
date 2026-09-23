@@ -1,11 +1,13 @@
 package com.tymewear.run.domain.sync
 
+import java.io.ByteArrayInputStream
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
+import java.util.zip.GZIPInputStream
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
@@ -96,6 +98,18 @@ class IntervalsClient(
         false
     } catch (e: java.io.IOException) {
         false
+    }
+
+    override fun originalFile(activityId: String): ByteArray {
+        val req = Request.Builder().url(baseUrl + "/api/v1/activity/$activityId/file").header("Authorization", auth).get().build()
+        val bytes = client.newCall(req).execute().use { r ->
+            if (!r.isSuccessful) throw IntervalsException(r.code, "HTTP ${r.code} ${req.method} ${req.url.encodedPath}: ${(r.body?.string() ?: "").take(200)}")
+            r.body?.bytes() ?: ByteArray(0)
+        }
+        // OkHttp un-gzips when it asked for gzip itself; a .fit.gz served as a plain body still arrives compressed.
+        return if (bytes.size >= 2 && bytes[0] == 0x1f.toByte() && bytes[1] == 0x8b.toByte()) {
+            GZIPInputStream(ByteArrayInputStream(bytes)).use { it.readBytes() }
+        } else bytes
     }
 
     private fun get(path: String): String =

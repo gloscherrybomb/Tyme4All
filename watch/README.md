@@ -21,8 +21,9 @@ Round 480x480, one page, no scrolling:
   amber, orange, red — the same Karoo zone palette as the phone app).
 - **BR**, **TV** and **MI %** in a row below, smaller. MI shows `--` when
   heart rate is unavailable.
-- **Zone name** small under the VE figure (Endurance, VT1, VT2, Top Z4,
-  VO2Max).
+- **Zone name** small under the VE figure (Z1 to Z5, as Tymewear names
+  them: Z1 below Endurance, Z2 Endurance to VT1, Z3 VT1 to VT2, Z4 VT2 to
+  Top Z4, Z5 Top Z4 and above).
 - **Status marker** at the top edge: green when connected, amber when
   stale, grey with a short label (`phone?`) when the strap is disconnected
   or the phone is unreachable — the whole background turns grey in that

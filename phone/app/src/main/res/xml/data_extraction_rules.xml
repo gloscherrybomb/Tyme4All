@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12 and later: the Tymewear sign-in stays on this phone. Its key cannot be restored, so a copy could never be read. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="tymewear_credentials.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="tymewear_credentials.xml" />
+    </device-transfer>
+</data-extraction-rules>

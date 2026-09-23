@@ -1,10 +1,14 @@
 package com.tymewear.run.domain.sync
 
+import com.tymewear.run.domain.ReserveSettings
 import com.tymewear.run.domain.Settings
+import com.tymewear.run.domain.ZoneThresholds
 import com.tymewear.run.domain.session.SessionEvent
 import com.tymewear.run.domain.session.SessionStore
+import com.tymewear.run.domain.tymewear.TymewearOutcome
 import java.time.Instant
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -28,6 +32,8 @@ class SyncEngineTest {
         override fun getStreams(activityId: String, types: List<String>) = failGetStreams?.let { throw it } ?: streams
         override fun putStreams(activityId: String, streams: List<Stream>): UpdateStreamsResult { lastPutId = activityId; lastPut = streams; return putResult }
         override fun verifyKey() = true
+        var original = ByteArray(0)
+        override fun originalFile(activityId: String) = original
     }
 
     private val startMs = 1_788_419_400_000L   // 2026-09-03T07:10:00Z
@@ -228,5 +234,125 @@ class SyncEngineTest {
         }
         assertTrue(SyncEngine(api, store).sync(b, settings, startMs + 1_000_000) is SyncOutcome.Synced)
         assertEquals(listOf(null, null, 60.0, null), api.lastPut!!.first { it.type == StreamCodes.VE }.data)
+    }
+
+    private val twSettings = settings.copy(tymewearSignedIn = true)
+    private val zeppRun = ActivitySummary("i1", Instant.ofEpochMilli(startMs + 3_000), "Run", "Run", "ZEPP", "Amazfit Cheetah 2 Ultra", 600)
+    private val twoRows = listOf(Stream("time", listOf(0.0, 1.0, 2.0, 3.0)), Stream("heartrate", listOf(120.0, 121.0, 122.0, 123.0)))
+
+    @Test fun `uploads to Tymewear after a successful push`() {
+        val store = SessionStore(tmp.root); val id = session(store)
+        var seen: List<Stream>? = null
+        val api = FakeApi().apply { activities = listOf(zeppRun); streams = twoRows }
+        val out = SyncEngine(api, store) { _, _, s -> seen = s; TymewearOutcome.Uploaded }.sync(id, twSettings, startMs + 700_000)
+        assertEquals(TymewearOutcome.Uploaded, (out as SyncOutcome.Synced).tymewear)
+        assertEquals(api.lastPut, seen)
+        assertEquals("synced", store.meta(id)!!.tymewearState)
+    }
+
+    @Test fun `a Tymewear failure leaves the intervals result synced`() {
+        val store = SessionStore(tmp.root); val id = session(store)
+        val api = FakeApi().apply { activities = listOf(zeppRun); streams = twoRows }
+        val out = SyncEngine(api, store) { _, _, _ -> throw RuntimeException("boom") }.sync(id, twSettings, startMs + 700_000)
+        assertTrue(out is SyncOutcome.Synced)
+        assertEquals("synced", store.meta(id)!!.syncState)
+        assertEquals("failed", store.meta(id)!!.tymewearState)
+    }
+
+    @Test fun `a refused sign-in leaves the Tymewear step pending for after the next sign-in`() {
+        val store = SessionStore(tmp.root); val id = session(store)
+        val api = FakeApi().apply { activities = listOf(zeppRun); streams = twoRows }
+        val refused = TymewearOutcome.Failed("Tymewear stopped accepting the saved sign-in", auth = true)
+        val out = SyncEngine(api, store) { _, _, _ -> refused }.sync(id, twSettings, startMs + 700_000)
+        assertEquals(refused, (out as SyncOutcome.Synced).tymewear)
+        assertEquals("synced", store.meta(id)!!.syncState)
+        assertEquals("pending", store.meta(id)!!.tymewearState)
+        assertEquals("Tymewear stopped accepting the sign-in", store.meta(id)!!.tymewearMessage)
+        assertEquals(listOf(id), SyncScheduler.dueTymewear(store.list(), startMs + 700_000 + 120_000).map { it.id })
+    }
+
+    @Test fun `a Tymewear rejection that is not about the sign-in is failed`() {
+        val store = SessionStore(tmp.root); val id = session(store)
+        val api = FakeApi().apply { activities = listOf(zeppRun); streams = twoRows }
+        SyncEngine(api, store) { _, _, _ -> TymewearOutcome.Failed("Tymewear rejected the file (400)") }.sync(id, twSettings, startMs + 700_000)
+        assertEquals("failed", store.meta(id)!!.tymewearState)
+        assertEquals("Tymewear rejected the file (400)", store.meta(id)!!.tymewearMessage)
+    }
+
+    @Test fun `no Tymewear state when not signed in`() {
+        val store = SessionStore(tmp.root); val id = session(store)
+        val api = FakeApi().apply { activities = listOf(zeppRun); streams = twoRows }
+        SyncEngine(api, store) { _, _, _ -> throw AssertionError("must not upload") }.sync(id, settings, startMs + 700_000)
+        assertNull(store.meta(id)!!.tymewearState)
+    }
+
+    @Test fun `no Tymewear step while the sign-in is refused`() {
+        val store = SessionStore(tmp.root); val id = session(store)
+        val api = FakeApi().apply { activities = listOf(zeppRun); streams = twoRows }
+        val refused = twSettings.copy(tymewearSignInRefused = true)
+        val engine = SyncEngine(api, store) { _, _, _ -> throw AssertionError("must not upload") }
+        assertTrue(engine.sync(id, refused, startMs + 700_000) is SyncOutcome.Synced)
+        assertNull(store.meta(id)!!.tymewearState)
+        assertNull(engine.syncTymewear(id, refused, startMs + 900_000))
+    }
+
+    @Test fun `retrying Tymewear never pushes to intervals again`() {
+        val store = SessionStore(tmp.root); val id = session(store)
+        val api = FakeApi().apply { activities = listOf(zeppRun); streams = twoRows }
+        SyncEngine(api, store) { _, _, _ -> TymewearOutcome.NotYet }.sync(id, twSettings, startMs + 700_000)
+        assertEquals("pending", store.meta(id)!!.tymewearState)
+        api.lastPut = null
+        val again = SyncEngine(api, store) { _, _, _ -> TymewearOutcome.Uploaded }.syncTymewear(id, twSettings, startMs + 900_000)
+        assertEquals(TymewearOutcome.Uploaded, again)
+        assertNull(api.lastPut)
+        assertEquals("synced", store.meta(id)!!.tymewearState)
+    }
+
+    @Test fun `zones use the activity's sport thresholds`() {
+        val store = SessionStore(tmp.root); val id = session(store)
+        val api = FakeApi().apply { activities = listOf(zeppRun); streams = twoRows }
+        // VE 40 is Z1 under the default thresholds and Z4 (VT2 30 to Top Z4 45) under these run thresholds.
+        val s = twSettings.copy(runThresholds = ZoneThresholds(10.0, 20.0, 30.0, 45.0, 60.0))
+        SyncEngine(api, store).sync(id, s, startMs + 700_000)
+        assertEquals(4.0, api.lastPut!!.first { it.type == StreamCodes.ZONE }.data[2])
+    }
+
+    @Test fun `retrying Tymewear does nothing for a session not synced to intervals`() {
+        val store = SessionStore(tmp.root); val id = session(store)
+        val api = FakeApi().apply { activities = listOf(zeppRun); streams = twoRows }
+        val out = SyncEngine(api, store) { _, _, _ -> throw AssertionError("must not upload") }.syncTymewear(id, twSettings, startMs + 700_000)
+        assertNull(out)
+        assertNull(store.meta(id)!!.tymewearState)
+    }
+
+    @Test fun `a Tymewear failure records only the class name`() {
+        val store = SessionStore(tmp.root); val id = session(store)
+        val api = FakeApi().apply { activities = listOf(zeppRun); streams = twoRows }
+        SyncEngine(api, store) { _, _, _ -> throw IllegalStateException("reply: secret") }.sync(id, twSettings, startMs + 700_000)
+        assertEquals("unexpected error: IllegalStateException", store.meta(id)!!.tymewearMessage)
+    }
+
+    @Test fun `a store error while recording the Tymewear step leaves the intervals result synced`() {
+        val store = SessionStore(tmp.root); val id = session(store)
+        val api = FakeApi().apply { activities = listOf(zeppRun); streams = twoRows }
+        val metaFile = java.io.File(tmp.root, "$id.meta.json")
+        // The synced record is written before the step runs; locking the file then makes the step's write throw an IOException.
+        val out = SyncEngine(api, store) { _, _, _ -> assertTrue(metaFile.setWritable(false)); TymewearOutcome.Uploaded }
+            .sync(id, twSettings, startMs + 700_000)
+        metaFile.setWritable(true)
+        assertTrue(out is SyncOutcome.Synced)
+        assertEquals(TymewearOutcome.Uploaded, (out as SyncOutcome.Synced).tymewear)
+        assertEquals("synced", store.meta(id)!!.syncState)
+        assertNull(store.meta(id)!!.tymewearState)
+    }
+
+    @Test fun `alignment uses the Tymewear reserve when signed in`() {
+        val store = SessionStore(tmp.root); val id = session(store)
+        val api = FakeApi().apply { activities = listOf(zeppRun); streams = twoRows }
+        // BR 20 with resting 10 and max 30 is a 50 % breathing reserve.
+        val tymewearReserve = ReserveSettings(restingBr = 10.0, maxBr = 30.0, restingHr = 50.0, maxHr = 190.0)
+        assertNotEquals(tymewearReserve, twSettings.reserve)
+        SyncEngine(api, store).sync(id, twSettings.copy(tymewearReserve = tymewearReserve), startMs + 700_000)
+        assertEquals(50.0, api.lastPut!!.first { it.type == StreamCodes.BRR }.data[2]!!, 1e-9)
     }
 }

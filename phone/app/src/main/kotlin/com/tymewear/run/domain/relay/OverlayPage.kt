@@ -24,7 +24,7 @@ object OverlayPage {
 </div>
 <script>
   var ZONE_COLORS=['#424242','#4db6ac','#0277bd','#f57f17','#ef6c00','#c62828'];
-  var ZONE_NAMES=['--','Endurance','VT1','VT2','Top Z4','VO2Max'];
+  var ZONE_NAMES=['--','Z1','Z2','Z3','Z4','Z5'];
   var token=new URLSearchParams(location.search).get('token');
   var liveUrl='/live'+(token?'?token='+encodeURIComponent(token):'');
   var failures=0;

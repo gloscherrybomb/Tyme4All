@@ -26,7 +26,11 @@ import androidx.core.content.ContextCompat
 import com.tymewear.run.android.CompanionAssociation
 import com.tymewear.run.android.Graph
 import com.tymewear.run.android.RecorderService
+import com.tymewear.run.android.TymewearAccess
 import com.tymewear.run.domain.StrapPresence
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 class MainActivity : ComponentActivity() {
@@ -50,6 +54,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         startRecorderServiceIfAllowed()
         refreshPairedCount()
+        // Tymewear's thresholds are read once per launch, not on rotation (and after each sign-in), never by the sync pass.
+        if (savedInstanceState == null) lifecycleScope.launch(Dispatchers.IO) { TymewearAccess.refreshProfile(applicationContext) }
 
         setContent {
             Tyme4AllTheme {

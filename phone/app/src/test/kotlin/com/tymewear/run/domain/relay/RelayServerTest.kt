@@ -47,7 +47,7 @@ class RelayServerTest {
         val (code, body) = call("GET", "/live")
         assertEquals(200, code)
         assertTrue(body.contains("\"status\":\"disconnected\""))
-        assertTrue(body.contains("\"vt1\":73.0"))
+        assertTrue(body.contains("\"thresholds\":{\"endurance\":73.0,\"vt1\":96.0,\"vt2\":112.0,\"topZ4\":130.0,\"vo2max\":180.0}"))
     }
 
     @Test fun `session start and stop`() {

@@ -6,7 +6,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class SeriesBuilderTest {
-    private val t = ZoneThresholds(73.0, 96.0, 112.0, 130.0)
+    private val t = ZoneThresholds(73.0, 96.0, 112.0, 130.0, 180.0)
     private fun breath(tMs: Long, br: Double, tv: Double) = SessionEvent.Breath(tMs, br, tv, 1.0, (tv * 100).toInt(), 100, 100, tMs / 40)
 
     @Test

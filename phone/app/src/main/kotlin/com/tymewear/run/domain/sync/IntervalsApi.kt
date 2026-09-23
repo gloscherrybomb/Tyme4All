@@ -12,4 +12,6 @@ interface IntervalsApi {
     fun getStreams(activityId: String, types: List<String>): List<Stream>
     fun putStreams(activityId: String, streams: List<Stream>): UpdateStreamsResult
     fun verifyKey(): Boolean
+    /** The activity's original uploaded file (FIT, GPX or TCX), uncompressed. */
+    fun originalFile(activityId: String): ByteArray
 }

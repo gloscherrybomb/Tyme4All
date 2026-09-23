@@ -6,6 +6,7 @@ import com.tymewear.run.domain.SettingsStore
 import com.tymewear.run.domain.StrapPresence
 import com.tymewear.run.domain.session.SessionController
 import com.tymewear.run.domain.session.SessionStore
+import com.tymewear.run.domain.tymewear.CredentialStore
 import java.io.File
 
 object Graph {
@@ -13,6 +14,10 @@ object Graph {
     lateinit var live: LiveState
     lateinit var sessionStore: SessionStore
     lateinit var sessions: SessionController
+    private lateinit var appContext: Context
+
+    /** Opened on first use, off the app's start-up path; never left unset (see EncryptedCredentialStore.open). */
+    val tymewearCredentials: CredentialStore by lazy { EncryptedCredentialStore.open(appContext) }
 
     /** Last known presence of the paired strap, from Companion Device Manager
      *  callbacks in StrapPresenceService. UNKNOWN when unpaired or before the first
@@ -37,6 +42,7 @@ object Graph {
 
     fun init(context: Context) {
         if (this::settings.isInitialized) return
+        appContext = context.applicationContext
         settings = PrefsSettingsStore(context)
         live = LiveState()
         sessionStore = SessionStore(File(context.filesDir, "sessions"))

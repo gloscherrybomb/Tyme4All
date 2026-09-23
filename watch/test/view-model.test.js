@@ -5,7 +5,7 @@ import { ZONE_COLORS, COLOR_GREY, COLOR_OK, COLOR_WARN } from '../shared/constan
 
 const payload = {
   ve: 62.4, br: 24.6, tv: 2.53, ie: 1.0, zone: 1, batteryPct: 77, status: 'connected', sessionId: 's',
-  thresholds: { vt1: 73, vt2: 96, topZ4: 112, vo2max: 130 },
+  thresholds: { endurance: 73, vt1: 96, vt2: 112, topZ4: 130, vo2max: 180 },
   reserve: { restingBr: 12, maxBr: 55, restingHr: 60, maxHr: 190 },
   updatedAtMs: 1000,
 }
@@ -32,7 +32,7 @@ test('connected payload renders values and zone colour', () => {
   assert.equal(vm.ve, '62')
   assert.equal(vm.br, '25')
   assert.equal(vm.tv, '2.5')
-  assert.equal(vm.zoneName, 'Endurance')
+  assert.equal(vm.zoneName, 'Z1')
   assert.equal(vm.battery, '77%')
   // %BRR = (24.6-12)/43*100 = 29.30; %HRR = 50 -> MI 58.6 -> '59'
   assert.equal(vm.mi, '59')

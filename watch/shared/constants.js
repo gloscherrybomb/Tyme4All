@@ -7,7 +7,7 @@ export const STALE_MS = 5000
 export const POLL_LEASE_MS = 15000
 
 export const ZONE_COLORS = [0x424242, 0x4db6ac, 0x0277bd, 0xf57f17, 0xef6c00, 0xc62828]
-export const ZONE_NAMES = ['--', 'Endurance', 'VT1', 'VT2', 'Top Z4', 'VO2Max']
+export const ZONE_NAMES = ['--', 'Z1', 'Z2', 'Z3', 'Z4', 'Z5']
 export const COLOR_TEXT = 0xffffff
 export const COLOR_MUTED = 0xbdbdbd
 export const COLOR_OK = 0x66bb6a

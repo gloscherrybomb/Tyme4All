@@ -72,12 +72,13 @@ class LiveStateTest {
     fun `payload carries thresholds reserve session and battery and serialises`() {
         val ls = LiveState()
         ls.onConnected(); ls.onBattery(77); ls.setSessionId("20260903-071000")
-        val p = ls.payload(s.copy(thresholds = ZoneThresholds(60.0, 80.0, 100.0, 120.0)), 0)
-        assertEquals(60.0, p.thresholds.vt1, 1e-9)
+        val p = ls.payload(s, 0)
+        assertEquals(96.0, p.thresholds.vt1, 1e-9)
         assertEquals(190.0, p.reserve.maxHr, 1e-9)
         assertEquals(77, p.batteryPct)
         assertEquals("20260903-071000", p.sessionId)
         val json = Json.encodeToString(LivePayload.serializer(), p)
         assertTrue(json.contains("\"status\":\"stale\""))
+        assertTrue(json.contains("\"thresholds\":{\"endurance\":73.0,\"vt1\":96.0,\"vt2\":112.0,\"topZ4\":130.0,\"vo2max\":180.0}"))
     }
 }

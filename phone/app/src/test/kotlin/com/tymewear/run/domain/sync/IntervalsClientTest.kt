@@ -4,6 +4,7 @@ import java.time.Instant
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -90,5 +91,18 @@ class IntervalsClientTest {
     fun `non 2xx throws with code`() {
         server.enqueue(MockResponse().setResponseCode(403).setBody("nope"))
         try { api.getStreams("i1", listOf("time")); fail() } catch (e: IntervalsException) { assertEquals(403, e.httpCode) }
+    }
+
+    @Test fun `downloads the original file, gunzipped`() {
+        val gz = java.io.ByteArrayOutputStream().also { java.util.zip.GZIPOutputStream(it).use { z -> z.write(byteArrayOf(14, 16, 1, 2)) } }.toByteArray()
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(gz)).setHeader("Content-Encoding", "gzip"))
+        assertArrayEquals(byteArrayOf(14, 16, 1, 2), api.originalFile("i100"))
+        assertEquals("/api/v1/activity/i100/file", server.takeRequest().path)
+    }
+
+    @Test fun `gunzips an original file served as a plain gzip body`() {
+        val gz = java.io.ByteArrayOutputStream().also { java.util.zip.GZIPOutputStream(it).use { z -> z.write(byteArrayOf(14, 16, 1, 2)) } }.toByteArray()
+        server.enqueue(MockResponse().setBody(okio.Buffer().write(gz)))
+        assertArrayEquals(byteArrayOf(14, 16, 1, 2), api.originalFile("i100"))
     }
 }

@@ -13,8 +13,8 @@ android {
         applicationId = "com.tymewear.run"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.2.0"
     }
 
     // Release signing comes from ~/.gradle/gradle.properties (TYME4ALL_*), never from the repo.
@@ -69,6 +69,8 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.timber)
     implementation(libs.zxing.core)
+    implementation(libs.garmin.fit)
+    implementation(libs.androidx.security.crypto)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

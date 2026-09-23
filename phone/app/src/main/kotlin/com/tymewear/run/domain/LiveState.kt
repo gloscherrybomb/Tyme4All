@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 enum class StrapStatus(val wire: String) { CONNECTED("connected"), STALE("stale"), DISCONNECTED("disconnected"), OFF("off") }
 
-@Serializable data class ThresholdsDto(val vt1: Double, val vt2: Double, val topZ4: Double, val vo2max: Double)
+@Serializable data class ThresholdsDto(val endurance: Double, val vt1: Double, val vt2: Double, val topZ4: Double, val vo2max: Double)
 @Serializable data class ReserveDto(val restingBr: Double, val maxBr: Double, val restingHr: Double, val maxHr: Double)
 
 @Serializable
@@ -58,13 +58,13 @@ class LiveState(stalenessMs: Long = Constants.BLE_DATA_STALENESS_TIMEOUT_MS) {
         val ve = if (br != null && tv != null) br * tv else null
         LivePayload(
             ve = ve, br = br, tv = tv, ie = if (live) ie else null,
-            zone = if (ve != null) ZoneClassifier.zoneFor(ve, settings.thresholds) else 0,
+            zone = if (ve != null) ZoneClassifier.zoneFor(ve, settings.liveThresholds()) else 0,
             // Battery reflects the BLE link, not the breath stream: kept while the
             // link is connected (including when status is "stale"), cleared on disconnect.
             batteryPct = if (connected) battery else null,
             status = st.wire, sessionId = sessionId,
-            thresholds = settings.thresholds.let { ThresholdsDto(it.vt1, it.vt2, it.topZ4, it.vo2max) },
-            reserve = settings.reserve.let { ReserveDto(it.restingBr, it.maxBr, it.restingHr, it.maxHr) },
+            thresholds = settings.liveThresholds().let { ThresholdsDto(it.endurance, it.vt1, it.vt2, it.topZ4, it.vo2max) },
+            reserve = settings.effectiveReserve().let { ReserveDto(it.restingBr, it.maxBr, it.restingHr, it.maxHr) },
             updatedAtMs = lastMs,
         )
     }

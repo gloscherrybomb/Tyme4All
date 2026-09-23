@@ -21,6 +21,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,8 +30,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.tymewear.run.android.Graph
+import com.tymewear.run.android.TymewearAccess
 import com.tymewear.run.domain.ReserveSettings
 import com.tymewear.run.domain.Settings
 import com.tymewear.run.domain.ZoneThresholds
@@ -49,6 +52,7 @@ fun SettingsScreen() {
     val scope = rememberCoroutineScope()
     val initial = remember { Graph.settings.load() }
 
+    var endurance by remember { mutableStateOf(NumField(initial.thresholds.endurance.toString())) }
     var vt1 by remember { mutableStateOf(NumField(initial.thresholds.vt1.toString())) }
     var vt2 by remember { mutableStateOf(NumField(initial.thresholds.vt2.toString())) }
     var topZ4 by remember { mutableStateOf(NumField(initial.thresholds.topZ4.toString())) }
@@ -69,6 +73,12 @@ fun SettingsScreen() {
     var keyTesting by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // The stored settings as they change (sign-in, sign-out, a refused sign-in), for the Tymewear card.
+    val stored by Graph.settings.changes.collectAsState(initial)
+    // A field is locked only when Tymewear's value replaces it for every sport.
+    val thresholdsLocked = !stored.manualThresholdsInUse()
+    val reserveLocked = !stored.manualReserveInUse()
+
     Scaffold(snackbarHost = { SnackbarHost(snackbarHostState) }) { scaffoldPadding ->
     Column(
         modifier = Modifier
@@ -79,18 +89,21 @@ fun SettingsScreen() {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text("Zone thresholds")
-        DoubleField("VT1", vt1) { vt1 = it }
-        DoubleField("VT2", vt2) { vt2 = it }
-        DoubleField("Top Z4", topZ4) { topZ4 = it }
-        DoubleField("VO2max", vo2max) { vo2max = it }
+        thresholdsCaption(stored)?.let { Text(it) }
+        DoubleField("Endurance", endurance, enabled = !thresholdsLocked) { endurance = it }
+        DoubleField("VT1", vt1, enabled = !thresholdsLocked) { vt1 = it }
+        DoubleField("VT2", vt2, enabled = !thresholdsLocked) { vt2 = it }
+        DoubleField("Top Z4", topZ4, enabled = !thresholdsLocked) { topZ4 = it }
+        DoubleField("VO2max", vo2max, enabled = !thresholdsLocked) { vo2max = it }
 
         HorizontalDivider()
 
         Text("Reserve")
-        DoubleField("Resting BR", restingBr) { restingBr = it }
-        DoubleField("Max BR", maxBr) { maxBr = it }
-        DoubleField("Resting HR", restingHr) { restingHr = it }
-        DoubleField("Max HR", maxHr) { maxHr = it }
+        reserveCaption(stored)?.let { Text(it) }
+        DoubleField("Resting BR", restingBr, enabled = !reserveLocked) { restingBr = it }
+        DoubleField("Max BR", maxBr, enabled = !reserveLocked) { maxBr = it }
+        DoubleField("Resting HR", restingHr, enabled = !reserveLocked) { restingHr = it }
+        DoubleField("Max HR", maxHr, enabled = !reserveLocked) { maxHr = it }
 
         HorizontalDivider()
 
@@ -100,6 +113,10 @@ fun SettingsScreen() {
             Text("Service enabled")
             Switch(checked = serviceEnabled, onCheckedChange = { serviceEnabled = it })
         }
+
+        HorizontalDivider()
+
+        TymewearCard(stored) { message -> scope.launch { snackbarHostState.showSnackbar(message) } }
 
         HorizontalDivider()
 
@@ -166,6 +183,7 @@ fun SettingsScreen() {
         HorizontalDivider()
 
         Button(onClick = {
+            val enduranced = endurance.text.toDoubleOrNull()
             val vt1d = vt1.text.toDoubleOrNull()
             val vt2d = vt2.text.toDoubleOrNull()
             val topZ4d = topZ4.text.toDoubleOrNull()
@@ -177,10 +195,13 @@ fun SettingsScreen() {
             val idleI = idleStopMinutes.text.toIntOrNull()
             val retentionI = retentionDays.text.toIntOrNull()
 
-            vt1 = vt1.copy(error = vt1d == null)
-            vt2 = vt2.copy(error = vt2d == null)
-            topZ4 = topZ4.copy(error = topZ4d == null)
-            vo2max = vo2max.copy(error = vo2maxd == null)
+            val order = ZoneThresholds.outOfOrder(listOf(enduranced, vt1d, vt2d, topZ4d, vo2maxd))
+            endurance = endurance.copy(error = order[0])
+            vt1 = vt1.copy(error = order[1])
+            vt2 = vt2.copy(error = order[2])
+            topZ4 = topZ4.copy(error = order[3])
+            vo2max = vo2max.copy(error = order[4])
+            val thresholdsOk = order.none { it }
             restingBr = restingBr.copy(error = restingBrd == null)
             maxBr = maxBr.copy(error = maxBrd == null)
             restingHr = restingHr.copy(error = restingHrd == null)
@@ -188,13 +209,15 @@ fun SettingsScreen() {
             idleStopMinutes = idleStopMinutes.copy(error = idleI == null || idleI !in 1..480)
             retentionDays = retentionDays.copy(error = retentionI == null)
 
-            if (vt1d != null && vt2d != null && topZ4d != null && vo2maxd != null &&
+            if (thresholdsOk && enduranced != null && vt1d != null && vt2d != null && topZ4d != null && vo2maxd != null &&
                 restingBrd != null && maxBrd != null && restingHrd != null && maxHrd != null &&
                 idleI != null && idleI in 1..480 && retentionI != null
             ) {
+                // Start from what is stored now, not a fresh value or the screen's first snapshot,
+                // so Save keeps the Tymewear sign-in and its thresholds.
                 Graph.settings.save(
-                    Settings(
-                        thresholds = ZoneThresholds(vt1d, vt2d, topZ4d, vo2maxd),
+                    Graph.settings.load().copy(
+                        thresholds = ZoneThresholds(enduranced, vt1d, vt2d, topZ4d, vo2maxd),
                         reserve = ReserveSettings(restingBrd, maxBrd, restingHrd, maxHrd),
                         sensorId = sensorId.ifBlank { null },
                         serviceEnabled = serviceEnabled,
@@ -213,13 +236,115 @@ fun SettingsScreen() {
     }
 }
 
+private const val FROM_TYMEWEAR = "From Tymewear. Switch off Use thresholds from Tymewear to edit."
+
+/** Null when Tymewear's thresholds are not in use. */
+private fun thresholdsCaption(s: Settings): String? = when {
+    !(s.tymewearSignedIn && s.useTymewearThresholds) -> null
+    !s.manualThresholdsInUse() -> FROM_TYMEWEAR
+    s.bikeThresholds == null && s.runThresholds == null -> "Tymewear has no thresholds yet, so these apply."
+    s.runThresholds == null -> "Tymewear has no Run thresholds, so these apply to runs."
+    else -> "Tymewear has no Bike thresholds, so these apply to rides, other sports and the live view."
+}
+
+private fun reserveCaption(s: Settings): String? = when {
+    !(s.tymewearSignedIn && s.useTymewearThresholds) -> null
+    !s.manualReserveInUse() -> FROM_TYMEWEAR
+    else -> "Tymewear has no resting and max values yet, so these apply."
+}
+
+/**
+ * Sign-in, the thresholds Tymewear holds, and the two Tymewear switches. Every save starts from
+ * what is stored at that moment, so nothing else in the settings is lost.
+ */
 @Composable
-private fun DoubleField(label: String, field: NumField, onChange: (NumField) -> Unit) {
+private fun TymewearCard(stored: Settings, showMessage: (String) -> Unit) {
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current.applicationContext
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Tymewear")
+            if (!stored.tymewearSignedIn || stored.tymewearSignInRefused) {
+                Text(
+                    if (stored.tymewearSignInRefused) "Tymewear stopped accepting your sign-in. Sign in again."
+                    else "Send your breathing to Tymewear and use your Tymewear thresholds. Your password is kept encrypted on this phone.",
+                )
+                OutlinedTextField(
+                    value = email, onValueChange = { email = it }, label = { Text("Email") }, singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Email),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = password, onValueChange = { password = it }, label = { Text("Password") }, singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Password),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        enabled = !busy && email.isNotBlank() && password.isNotEmpty(),
+                        onClick = {
+                            busy = true
+                            val e = email.trim()
+                            val p = password
+                            password = ""
+                            scope.launch {
+                                val message = withContext(Dispatchers.IO) { TymewearAccess.signIn(context, e, p) }
+                                busy = false
+                                showMessage(message)
+                            }
+                        },
+                    ) { Text("Sign in") }
+                    if (stored.tymewearSignedIn) SignOutButton(scope)
+                }
+            } else {
+                Text("Signed in to Tymewear")
+                val lines = listOfNotNull(
+                    stored.bikeThresholds?.let { thresholdsLine("Bike", it) },
+                    stored.runThresholds?.let { thresholdsLine("Run", it) },
+                )
+                if (lines.isEmpty()) Text("No thresholds in Tymewear yet") else lines.forEach { Text(it) }
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Text("Also send breathing to Tymewear", modifier = Modifier.weight(1f))
+                    Switch(checked = stored.tymewearUpload, onCheckedChange = { on ->
+                        Graph.settings.save(Graph.settings.load().copy(tymewearUpload = on))
+                    })
+                }
+                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Text("Use thresholds from Tymewear", modifier = Modifier.weight(1f))
+                    Switch(checked = stored.useTymewearThresholds, onCheckedChange = { on ->
+                        Graph.settings.save(Graph.settings.load().copy(useTymewearThresholds = on))
+                    })
+                }
+                SignOutButton(scope)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SignOutButton(scope: kotlinx.coroutines.CoroutineScope) {
+    OutlinedButton(onClick = { scope.launch { withContext(Dispatchers.IO) { TymewearAccess.signOut() } } }) { Text("Sign out") }
+}
+
+/** "Bike: Endurance 73.2 · VT1 96 · VT2 112 · Top Z4 129.6 · VO2max 182.3" */
+private fun thresholdsLine(sport: String, t: ZoneThresholds): String {
+    fun n(v: Double) = if (v % 1.0 == 0.0) v.toLong().toString() else v.toString()
+    return "$sport: Endurance ${n(t.endurance)} · VT1 ${n(t.vt1)} · VT2 ${n(t.vt2)} · Top Z4 ${n(t.topZ4)} · VO2max ${n(t.vo2max)}"
+}
+
+@Composable
+private fun DoubleField(label: String, field: NumField, enabled: Boolean = true, onChange: (NumField) -> Unit) {
     OutlinedTextField(
         value = field.text,
         onValueChange = { onChange(NumField(it, error = false)) },
         label = { Text(label) },
         isError = field.error,
+        enabled = enabled,
         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Decimal),
         modifier = Modifier.fillMaxWidth(),
     )

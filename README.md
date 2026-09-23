@@ -13,15 +13,15 @@ I really like coffee, so if this is useful to you, please buy me one :)
 1. Put the strap on. The phone notices it, connects, and starts recording. There is nothing to press.
 2. Train with whatever you normally use: a watch, TrainingPeaks Virtual, a bike computer.
 3. Take the strap off. Three minutes later the phone closes the session.
-4. Once your activity has uploaded to Intervals.icu, the phone finds the activity that overlaps the session most and pushes seven breathing streams onto it: ventilation, breathing rate, tidal volume, I:E ratio, VE zone, breathing reserve and mobilization index.
+4. Once your activity has uploaded to Intervals.icu, the phone finds the activity that overlaps the session most and pushes seven breathing streams onto it: ventilation, breathing rate, tidal volume, I:E ratio, VE zone, breathing reserve and mobilization index. If you signed in to Tymewear, the phone then sends the breathing to Tymewear too.
 
-The stream codes are the same ones K-Breathe writes on the Karoo, so Intervals.icu charts built for one work for the other. Tymewear's dashboard reads Karoo rides through its Intervals.icu integration; whether it also picks up streams added to an activity afterwards has not been confirmed yet.
+The stream codes are the same ones K-Breathe writes on the Karoo, so Intervals.icu charts built for one work for the other. Tymewear's dashboard reads Karoo rides through its Intervals.icu integration, but it copies each activity only once, when it arrives, and does not pick up streams added afterwards. That is why Tyme4All sends the breathing to Tymewear itself (see [Tymewear](#tymewear)).
 
 ## What is in this repo
 
 | Folder | What it is | Status |
 |---|---|---|
-| [`phone/`](phone/README.md) | Android app. Connects to the strap, records, and syncs to Intervals.icu. | Working. Tested end to end on a Nothing phone with Android 16. |
+| [`phone/`](phone/README.md) | Android app. Connects to the strap, records, and syncs to Intervals.icu and Tymewear. | Working. Tested end to end on a Nothing phone with Android 16. |
 | [`pc/`](pc/README.md) | A small always-on-top window for Windows that shows live breathing values on top of indoor training software, fed by the phone over Wi-Fi. | Written, not yet run on Windows. |
 | [`watch/`](watch/README.md) | A data page for the Amazfit Cheetah 2 Ultra that shows live breathing values during a run. | Experimental. Not yet run on a real watch. |
 
@@ -46,18 +46,29 @@ The browser page has been tested. The Windows window has not yet been run on Win
 ## Getting started
 
 1. Download `tyme4all.apk` from the [latest release](../../releases/latest) and install it. You will need to allow installs from your browser or file manager.
-2. Open the app and follow the setup in the [phone README](phone/README.md#first-time-setup). In short: grant permissions, exclude the app from battery optimisation, paste your Intervals.icu API key, and create the seven custom streams in Intervals.icu.
+2. Open the app and follow the setup in the [phone README](phone/README.md#first-time-setup). In short: grant permissions, exclude the app from battery optimisation, paste your Intervals.icu API key, create the seven custom streams in Intervals.icu, and, if you like, sign in to Tymewear.
 3. On the Status tab, tap **Pair strap** with the strap on. From then on the app wakes up by itself when the strap comes into range, even if the app has been closed.
 4. Go for a run or a ride. The phone shows "Recording since …" while it records, and a notification when the data has been added to Intervals.icu.
 
-Set your own ventilation thresholds on the Settings tab before you trust the zones. The defaults are placeholders. Get your values from a [Tymewear threshold test](https://www.tymewear.com/blogs/startup-guides/threshold-test).
+Set your ventilation thresholds before you trust the zones: Endurance, VT1, VT2, Top Z4 and VO2max, as Tymewear names them. If you sign in to Tymewear, the app reads them from your Tymewear Fitness Profile. Otherwise enter them on the Settings tab; the defaults are placeholders. Get your values from a [Tymewear threshold test](https://www.tymewear.com/blogs/startup-guides/threshold-test).
+
+Upgrading from 0.1.0: the first launch moves your thresholds to Tymewear's names (the old VT1 becomes Endurance, VT2 becomes VT1, Top Z4 becomes VT2 and VO2max becomes Top Z4, and a VO2max is set above it). The zone edges stay where they were.
+
+## Tymewear
+
+Signing in to Tymewear is optional. Everything else works without it. Sign in on the Settings tab, in the **Tymewear** card.
+
+- **What is sent.** After the breathing has been added to an Intervals.icu activity, the phone downloads that activity's original file from Intervals.icu, adds the breathing to it in the format Tymewear's own apps use, and replaces Tymewear's copy of the activity with it. The activity on Intervals.icu is not changed. Karoo rides are skipped, because they carry breathing already. Turn **Also send breathing to Tymewear** off to stop sending.
+- **Thresholds come from Tymewear.** When the app opens, and right after you sign in, it reads Endurance, VT1, VT2, Top Z4 and VO2max from your Tymewear Fitness Profile, plus your resting and maximum breathing rate and heart rate. Thresholds are per sport: runs, trail runs, virtual runs, walks and hikes use your run thresholds; everything else, and the live view, use your bike thresholds. Turn **Use thresholds from Tymewear** off to use the values on the Settings tab instead. Those values also apply wherever Tymewear has none.
+- **Your password.** It is kept encrypted on the phone, sent only to Tymewear, and left out of phone backups. If Tymewear stops accepting it, the app stops contacting Tymewear, tells you once, and the Tymewear card asks you to sign in again. Uploads that were waiting then go ahead once you sign in again, if that is within 6 hours of the session; after that, use **Retry sync** on the Sessions tab.
+- **Tymewear's API is not documented** and may change. If it does, sending to Tymewear stops working, and recording and the Intervals.icu sync carry on as before.
 
 ## Things to know
 
 - **The strap takes one connection at a time.** Before a ride where the Karoo should record the strap, turn **Service enabled** off in the app. Tyme4All never pushes to a Karoo activity, so a Karoo recording is never overwritten.
 - **Put the strap on a few minutes early.** Android can take a couple of minutes to notice the strap, and the session has to overlap the activity by at least five minutes to be matched.
 - **The phone keeps running after the session** until the activity has been found, for up to six hours. If you only tried the strap on, tap **Discard, no activity coming** on the notification.
-- **Nothing leaves your phone except the push to Intervals.icu.** The live Wi-Fi view is off by default, and when on it stays on your local network.
+- **Nothing leaves your phone except the push to Intervals.icu and, if you signed in, to Tymewear.** The live Wi-Fi view is off by default, and when on it stays on your local network.
 
 ## Building from source
 

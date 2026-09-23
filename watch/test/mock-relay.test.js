@@ -37,6 +37,7 @@ test('mock relay serves health, live and session lifecycle', async () => {
       ['ve', 'br', 'tv', 'ie', 'zone', 'batteryPct', 'status', 'sessionId', 'thresholds', 'reserve', 'updatedAtMs'].sort()
     )
     assert.ok(live.zone >= 0 && live.zone <= 5)
+    assert.deepEqual(live.thresholds, { endurance: 73, vt1: 96, vt2: 112, topZ4: 130, vo2max: 180 })
     assert.ok(live.status === 'connected' || live.status === 'stale')
 
     const start1 = await fetch(`${BASE}/session/start`, { method: 'POST' }).then((r) => r.json())
