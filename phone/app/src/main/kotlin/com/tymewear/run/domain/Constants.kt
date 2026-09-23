@@ -32,4 +32,6 @@ object Constants {
     const val SYNC_GIVE_UP_MS = 6 * 60 * 60 * 1000L
     const val MIN_OVERLAP_MS = 5 * 60 * 1000L
     const val RETENTION_DAYS = 90
+    const val PRESENCE_GRACE_MS = 2 * 60 * 1000L
+    const val APP_OPEN_SCAN_MS = 20_000L
 }

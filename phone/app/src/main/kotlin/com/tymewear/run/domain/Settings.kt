@@ -21,6 +21,10 @@ data class Settings(
     val tymewearReserve: ReserveSettings? = null,
     /** Tymewear refused the saved email and password; nothing calls Tymewear until the user signs in again. */
     val tymewearSignInRefused: Boolean = false,
+    /** When the thresholds were last read from Tymewear, or last failed to be. */
+    val tymewearRefreshMs: Long? = null,
+    /** Why that last read failed (an HTTP code or class name only); null after a good read. */
+    val tymewearRefreshError: String? = null,
 ) {
     private val tymewearApplies: Boolean get() = tymewearSignedIn && useTymewearThresholds
 

@@ -303,9 +303,23 @@ class SyncEngineTest {
         assertEquals("pending", store.meta(id)!!.tymewearState)
         api.lastPut = null
         val again = SyncEngine(api, store) { _, _, _ -> TymewearOutcome.Uploaded }.syncTymewear(id, twSettings, startMs + 900_000)
-        assertEquals(TymewearOutcome.Uploaded, again)
+        assertEquals(TymewearOutcome.Uploaded, again!!.outcome)
         assertNull(api.lastPut)
         assertEquals("synced", store.meta(id)!!.tymewearState)
+    }
+
+    @Test fun `retrying Tymewear returns the activity's label for the notification`() {
+        val store = SessionStore(tmp.root); val id = session(store)
+        val api = FakeApi().apply { activities = listOf(zeppRun); streams = twoRows }
+        SyncEngine(api, store) { _, _, _ -> TymewearOutcome.NotYet }.sync(id, twSettings, startMs + 700_000)
+        val named = SyncEngine(api, store) { _, _, _ -> TymewearOutcome.Uploaded }.syncTymewear(id, twSettings, startMs + 900_000)
+        assertEquals(TymewearRetry(TymewearOutcome.Uploaded, "Run"), named)
+
+        val unnamed = zeppRun.copy(name = null)
+        api.activities = listOf(unnamed)
+        val hhmm = java.time.format.DateTimeFormatter.ofPattern("HH:mm").format(unnamed.startDate.atZone(java.time.ZoneId.systemDefault()))
+        val out = SyncEngine(api, store) { _, _, _ -> TymewearOutcome.Uploaded }.syncTymewear(id, twSettings, startMs + 1_100_000)
+        assertEquals("Run at $hhmm", out!!.activityLabel)
     }
 
     @Test fun `zones use the activity's sport thresholds`() {

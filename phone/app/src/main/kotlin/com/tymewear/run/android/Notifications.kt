@@ -64,7 +64,7 @@ object Notifications {
 
     /**
      * A later Tymewear retry succeeded for a session already synced to Intervals.icu.
-     * [label] is the activity's label when the caller has it, else its id.
+     * [label] is the activity's name, else its type and local start time (as in the sync notification).
      */
     fun tymewearUploaded(ctx: Context, sessionId: String, label: String) = post(ctx, sessionId.hashCode(),
         NotificationCompat.Builder(ctx, CHANNEL_SYNC)

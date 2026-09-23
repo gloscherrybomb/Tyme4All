@@ -40,6 +40,8 @@ import com.tymewear.run.domain.ZoneThresholds
 import com.tymewear.run.domain.relay.LanToken
 import com.tymewear.run.domain.sync.IntervalsClient
 import com.tymewear.run.domain.sync.StreamCodes
+import com.tymewear.run.domain.tymewear.ProfileRefresh
+import java.time.ZoneId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -73,8 +75,9 @@ fun SettingsScreen() {
     var keyTesting by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // The stored settings as they change (sign-in, sign-out, a refused sign-in), for the Tymewear card.
-    val stored by Graph.settings.changes.collectAsState(initial)
+    // The stored settings as they change (sign-in, a thresholds read, sign-out, a refused sign-in),
+    // for the Tymewear card and the captions: collected, so a save shows at once.
+    val stored by Graph.settings.changes.collectAsState(Graph.settings.load())
     // A field is locked only when Tymewear's value replaces it for every sport.
     val thresholdsLocked = !stored.manualThresholdsInUse()
     val reserveLocked = !stored.manualReserveInUse()
@@ -308,6 +311,18 @@ private fun TymewearCard(stored: Settings, showMessage: (String) -> Unit) {
                     stored.runThresholds?.let { thresholdsLine("Run", it) },
                 )
                 if (lines.isEmpty()) Text("No thresholds in Tymewear yet") else lines.forEach { Text(it) }
+                ProfileRefresh.statusLine(stored, ZoneId.systemDefault())?.let { Text(it) }
+                OutlinedButton(
+                    enabled = !busy,
+                    onClick = {
+                        busy = true
+                        scope.launch {
+                            val result = withContext(Dispatchers.IO) { TymewearAccess.refreshProfile(context) }
+                            busy = false
+                            showMessage(ProfileRefresh.refreshMessage(result))
+                        }
+                    },
+                ) { Text("Refresh from Tymewear") }
                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     Text("Also send breathing to Tymewear", modifier = Modifier.weight(1f))
                     Switch(checked = stored.tymewearUpload, onCheckedChange = { on ->

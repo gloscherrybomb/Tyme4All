@@ -27,11 +27,16 @@ object Graph {
     var strapPresence: StrapPresence = StrapPresence.UNKNOWN
 
     /** How many paired associations `CompanionAssociation.startObserving` last
-     *  succeeded in starting presence observation for. Compared against the paired
-     *  count in the UI so a platform-level failure (e.g. presence observation silently
-     *  not engaging) surfaces instead of quietly degrading to always-on. */
+     *  succeeded in starting presence observation for; null until the service (or a
+     *  pairing) has reported, and while the service is switched off. Observed by the UI
+     *  and compared against the paired count, so a platform-level failure (e.g. presence
+     *  observation silently not engaging) surfaces instead of quietly degrading to always-on. */
+    val observingCount = kotlinx.coroutines.flow.MutableStateFlow<Int?>(null)
+
+    /** Whether a Companion Device Manager association exists. Set when the service starts and on
+     *  pair and unpair, so the housekeeping loop need not ask the system every tick. */
     @Volatile
-    var observingCount: Int = 0
+    var strapPaired: Boolean = false
 
     /** True between RecorderService.onCreate and onDestroy, so the UI can tell "service not
      *  running" apart from "running but no Wi-Fi address yet". */

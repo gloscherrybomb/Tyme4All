@@ -40,7 +40,8 @@ fun StatusScreen(
     onPairStrap: () -> Unit,
     onUnpairStrap: () -> Unit,
     pairedCount: Int,
-    observingCount: Int,
+    /** Null until the service has reported; 0 then means presence observation failed. */
+    observingCount: Int?,
 ) {
     val context = LocalContext.current
     var payload by remember { mutableStateOf<LivePayload?>(null) }
@@ -61,7 +62,10 @@ fun StatusScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         val p = payload
-        Text("Status: ${p?.status ?: "unknown"}")
+        val recorderRunning by Graph.recorderRunning.collectAsState()
+        // With presence observed the service is stopped while the strap is out of range, and starts when it comes back.
+        val waitingForRange = !recorderRunning && p?.status != StrapStatus.OFF.wire && Graph.strapPaired && (observingCount ?: 0) > 0
+        Text(if (waitingForRange) "Status: waiting for the strap to come into range" else "Status: ${p?.status ?: "unknown"}")
         Text("Battery: ${p?.batteryPct?.let { "$it%" } ?: "-"}")
         Text("VE: ${p?.ve?.format() ?: "-"} L/min")
         Text("BR: ${p?.br?.format() ?: "-"} brpm")
@@ -115,11 +119,14 @@ fun StatusScreen(
 
         Text("PC overlay")
         val lanUrl by Graph.lanOverlayUrl.collectAsState()
-        val recorderRunning by Graph.recorderRunning.collectAsState()
         val lanEnabled = Graph.settings.load().lanOverlayEnabled
         when {
             !lanEnabled -> Text("Off. Turn on \"LAN overlay\" on the Settings tab.")
-            lanUrl == null && (!recorderRunning || Graph.live.status(System.currentTimeMillis()) == StrapStatus.OFF) ->
+            lanUrl == null && Graph.live.status(System.currentTimeMillis()) == StrapStatus.OFF ->
+                Text("The strap service is off. Switch on \"Service enabled\" on the Settings tab.")
+            lanUrl == null && !recorderRunning && waitingForRange ->
+                Text("Waiting for the strap to come into range. Put the strap on and the URL appears here.")
+            lanUrl == null && !recorderRunning ->
                 Text("The strap service is not running. Put the strap on, or open the app with it in range, and the URL appears here.")
             lanUrl == null -> Text("Waiting for Wi-Fi. The URL appears once the phone has a Wi-Fi address.")
             else -> {

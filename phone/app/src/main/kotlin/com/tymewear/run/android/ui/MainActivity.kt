@@ -3,7 +3,6 @@ package com.tymewear.run.android.ui
 import android.Manifest
 import android.companion.CompanionDeviceManager
 import android.content.IntentSender
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -17,13 +16,23 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import android.content.pm.PackageManager
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import com.tymewear.run.android.BleManager
 import com.tymewear.run.android.CompanionAssociation
+import com.tymewear.run.domain.AppOpenAction
+import com.tymewear.run.domain.Constants
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import com.tymewear.run.android.Graph
 import com.tymewear.run.android.RecorderService
 import com.tymewear.run.android.TymewearAccess
@@ -47,8 +56,6 @@ class MainActivity : ComponentActivity() {
 
     var pairedCount = mutableStateOf(0)
         private set
-    var observingCount = mutableStateOf(0)
-        private set
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -65,7 +72,6 @@ class MainActivity : ComponentActivity() {
                         onPairStrap = { pairStrap() },
                         onUnpairStrap = { unpairStrap() },
                         pairedCount = pairedCount.value,
-                        observingCount = observingCount.value,
                     )
                 }
             }
@@ -93,8 +99,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun onAssociationCreated() {
-        Graph.observingCount = CompanionAssociation.startObserving(this)
-        observingCount.value = Graph.observingCount
+        Graph.observingCount.value = CompanionAssociation.startObserving(this)
         RecorderService.start(this)
         refreshPairedCount()
     }
@@ -102,8 +107,7 @@ class MainActivity : ComponentActivity() {
     private fun unpairStrap() {
         CompanionAssociation.stopObserving(this)
         CompanionAssociation.disassociateAll(this)
-        Graph.observingCount = 0
-        observingCount.value = 0
+        Graph.observingCount.value = 0
         // Unpairing must not leave a stale AWAY reading behind: with no association left
         // to report presence, the housekeeping loop should treat the strap the same as
         // "never paired" (UNKNOWN), not stop the service on an answer that can never update.
@@ -113,7 +117,7 @@ class MainActivity : ComponentActivity() {
 
     private fun refreshPairedCount() {
         pairedCount.value = if (CompanionAssociation.isSupported(this)) CompanionAssociation.associations(this).size else 0
-        observingCount.value = Graph.observingCount
+        Graph.strapPaired = pairedCount.value > 0
     }
 
     override fun onResume() {
@@ -135,17 +139,82 @@ class MainActivity : ComponentActivity() {
         return perms.toTypedArray()
     }
 
-    private fun hasConnectPermission(): Boolean {
-        val perm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            Manifest.permission.BLUETOOTH_CONNECT
-        } else {
-            Manifest.permission.ACCESS_FINE_LOCATION
+    /**
+     * On app open and after the permission dialog: start the service when it has work, else look
+     * for the strap with a short scan while the app is in the foreground (RecorderService.appOpenAction).
+     */
+    private fun startRecorderServiceIfAllowed() {
+        val app = applicationContext
+        lifecycleScope.launch {
+            val action = withContext(Dispatchers.IO) {
+                // A running service is already looking for the strap itself.
+                RecorderService.appOpenAction(
+                    app,
+                    canScan = hasScanPermission() && RecorderService.hasConnectPermission(app),
+                    scanRunning = strapScan?.isActive == true || Graph.recorderRunning.value,
+                )
+            }
+            when (action) {
+                // Decided off the main thread: the app may have left the foreground since (onResume decides again).
+                AppOpenAction.START -> if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) RecorderService.start(app)
+                AppOpenAction.SCAN -> if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) scanForStrap()
+                AppOpenAction.NOTHING -> {}
+            }
         }
-        return ContextCompat.checkSelfPermission(this, perm) == PackageManager.PERMISSION_GRANTED
     }
 
-    private fun startRecorderServiceIfAllowed() {
-        if (hasConnectPermission()) RecorderService.start(this)
+    /** The foreground strap scan, while it runs. Cancelled in onPause, so it never runs in the background. */
+    private var strapScan: Job? = null
+
+    /**
+     * Scans for up to Constants.APP_OPEN_SCAN_MS for the paired strap (its MAC when known, else the
+     * service's name and sensor id match) and starts the service if it is found. No notification.
+     */
+    private fun scanForStrap() {
+        if (strapScan?.isActive == true) return
+        val app = applicationContext
+        strapScan = lifecycleScope.launch {
+            // The service started by other means (the strap appeared, a sign-in): it looks for the strap itself.
+            val scan = coroutineContext[Job]
+            val watcher = launch { Graph.recorderRunning.first { it }; scan?.cancel() }
+            val macs = withContext(Dispatchers.IO) { CompanionAssociation.associations(app).mapNotNull { it.address } }
+            val sensorId = Graph.settings.load().sensorId
+            val found = try {
+                withTimeoutOrNull(Constants.APP_OPEN_SCAN_MS) {
+                    BleManager(app).scan(sensorId).first { d -> macs.isEmpty() || macs.any { it.equals(d.address, ignoreCase = true) } }
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Timber.w("Strap scan failed: ${e.javaClass.simpleName}")
+                null
+            }
+            if (found != null && lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                Timber.i("Strap found by the app-open scan; starting the service")
+                RecorderService.start(app)
+            }
+            watcher.cancel()
+        }
+    }
+
+    private fun stopStrapScan() {
+        strapScan?.cancel()
+        strapScan = null
+    }
+
+    override fun onPause() {
+        stopStrapScan()
+        super.onPause()
+    }
+
+    override fun onStop() {
+        stopStrapScan()
+        super.onStop()
+    }
+
+    private fun hasScanPermission(): Boolean {
+        val perm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Manifest.permission.BLUETOOTH_SCAN else Manifest.permission.ACCESS_FINE_LOCATION
+        return ContextCompat.checkSelfPermission(this, perm) == PackageManager.PERMISSION_GRANTED
     }
 }
 
@@ -157,8 +226,9 @@ fun MainScreen(
     onPairStrap: () -> Unit,
     onUnpairStrap: () -> Unit,
     pairedCount: Int,
-    observingCount: Int,
 ) {
+    // Set by the service after it starts observing, so collected rather than read once.
+    val observingCount by Graph.observingCount.collectAsState()
     var selected by remember { mutableIntStateOf(0) }
 
     Scaffold(

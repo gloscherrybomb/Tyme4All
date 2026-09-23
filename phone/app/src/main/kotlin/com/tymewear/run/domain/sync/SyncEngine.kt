@@ -22,6 +22,9 @@ sealed class SyncOutcome {
     data class Failed(val message: String) : SyncOutcome()
 }
 
+/** A Tymewear retry's outcome and the activity's label for the notification. */
+data class TymewearRetry(val outcome: TymewearOutcome, val activityLabel: String)
+
 /** The activity to push to, and the next-best overlapping activity if there was one. */
 private data class Choice(val activity: ActivitySummary, val runnerUp: ActivitySummary?)
 
@@ -107,22 +110,27 @@ class SyncEngine(
     /**
      * Retries only the Tymewear step of a session already synced to Intervals.icu: rebuilds the
      * same streams the push sent and hands them to the uploader. Never pushes to Intervals.icu.
-     * Null when there is nothing to do (no uploader, Tymewear off, signed out or refused, session not synced).
+     * Null when there is nothing to do (no uploader, Tymewear off, signed out or refused, session not synced);
+     * otherwise the outcome with the activity's label for the notification.
      */
-    fun syncTymewear(sessionId: String, settings: Settings, nowMs: Long): TymewearOutcome? {
+    fun syncTymewear(sessionId: String, settings: Settings, nowMs: Long): TymewearRetry? {
         val step = uploader ?: return null
         if (!settings.tymewearActive) return null
         val meta = store.meta(sessionId) ?: return null
         val activityId = meta.activityId
         if (meta.syncState != "synced" || activityId == null) return null
-        return tymewearStep(sessionId, nowMs) {
+        // The same label as the sync notification once the activity is found; its id until then.
+        var label = "Intervals.icu activity $activityId"
+        val outcome = tymewearStep(sessionId, nowMs) {
             val start = Instant.ofEpochMilli(meta.startMs)
             val activity = api.listActivities(start.minusSeconds(86_400), start.plusSeconds(86_400)).firstOrNull { it.id == activityId }
                 ?: return@tymewearStep TymewearOutcome.Failed("activity $activityId not found near the session")
+            label = activityLabel(activity)
             val (time, aligned) = prepare(meta, activity, settings)
                 ?: return@tymewearStep TymewearOutcome.Failed("activity has no time stream")
             step.upload(activity, time, aligned)
         }
+        return TymewearRetry(outcome, label)
     }
 
     /**

@@ -10,7 +10,7 @@ Android phone app that records breathing data from a Tymewear VitalPro strap dur
 - After a session ends, waits for the Intervals.icu activity that overlaps the session by at least 5 minutes (an Amazfit run, a TrainingPeaks Virtual ride, a Karoo ride, anything except Strava imports), derives seven breathing streams from the raw log, and pushes them onto that activity.
 - Notifies on sync success, sync failure, or no match found, and lets you retry or match by hand.
 - If you signed in to Tymewear: after each Intervals.icu push, downloads the activity's original file from Intervals.icu, adds the breathing as Tymewear's own FIT fields, and replaces Tymewear's copy of the activity with it. Intervals.icu is not changed, and Karoo rides are skipped.
-- If you signed in to Tymewear: reads your thresholds (Endurance, VT1, VT2, Top Z4, VO2max, run and bike) and resting and maximum breathing rate and heart rate from your Tymewear Fitness Profile when the app opens and right after sign-in.
+- If you signed in to Tymewear: reads your thresholds (Endurance, VT1, VT2, Top Z4, VO2max, run and bike) and resting and maximum breathing rate and heart rate from your Tymewear Fitness Profile when the app opens, right after sign-in, and when you tap **Refresh from Tymewear**.
 - Serves the same live values, token-protected, on the phone's Wi-Fi address for the PC overlay.
 
 It does not connect to a heart rate sensor. Tymewear's API is undocumented; if it changes, the Tymewear part stops and the rest of the app keeps working.
@@ -51,7 +51,7 @@ Do this once, on the Status and Settings tabs.
 2. **Battery optimisation.** Still on the Status tab, tap **Battery optimisation** and exclude Tyme4All. Then, in Android's own system settings, also exclude the **Zepp** app. If either app is left under battery optimisation, Android can kill it mid-run and the watch display or the recording can drop out.
 3. **Intervals.icu Supporter.** Confirm your Intervals.icu account has an active Supporter subscription — stream upload fails without one.
 4. **API key.** In Intervals.icu, go to Settings → Developer and copy your API key. Paste it into the **API key** field on the Settings tab and tap **Test** to confirm it's accepted.
-5. **Sign in to Tymewear (optional).** In the **Tymewear** card on the Settings tab, enter your Tymewear email and password and tap **Sign in**. The password is kept encrypted on the phone, sent only to Tymewear, and left out of backups. Once signed in, the card shows the thresholds read from your Fitness Profile and two switches: **Also send breathing to Tymewear** and **Use thresholds from Tymewear**. With the second off, or where Tymewear has no value, the thresholds on the Settings tab apply. Runs, trail runs, virtual runs, walks and hikes use your run thresholds; everything else and the live view use your bike thresholds.
+5. **Sign in to Tymewear (optional).** In the **Tymewear** card on the Settings tab, enter your Tymewear email and password and tap **Sign in**. The password is kept encrypted on the phone, sent only to Tymewear, and left out of backups. Once signed in, the card shows the thresholds read from your Fitness Profile, when they were last read ("Thresholds read 07:42") or why the last read failed ("Couldn't read thresholds: HTTP 503"), a **Refresh from Tymewear** button that reads them again, and two switches: **Also send breathing to Tymewear** and **Use thresholds from Tymewear**. With the second off, or where Tymewear has no value, the thresholds on the Settings tab apply. Runs, trail runs, virtual runs, walks and hikes use your run thresholds; everything else and the live view use your bike thresholds.
 6. **Custom streams.** In Intervals.icu, open any activity → Charts → Custom Streams → Add Stream, and create these seven codes with these exact units:
 
    | Code | Units |
@@ -67,7 +67,7 @@ Do this once, on the Status and Settings tabs.
    The Settings tab has a **Copy codes** button that copies this list to the clipboard so you can paste codes in as you go.
 7. **Link Zepp to Intervals.icu.** In the Zepp app: Profile → third-party account linking, and connect Intervals.icu. This is what gets your Amazfit runs onto Intervals.icu in the first place.
 
-The service is not started on boot; after a phone reboot, open the app once to start it again.
+The service is not started on boot; after a phone reboot, open the app once. Unpaired, that starts it again; with the strap paired, the app starts it when the strap comes into range.
 
 ## Sessions
 
@@ -133,16 +133,25 @@ session's Intervals.icu sync has finished or given up (synced, failed, or unmatc
 not stop the service before it can push. Leaving the strap unpaired (or unpairing it again
 from the Status tab) reverts to the previous always-on behaviour.
 
+With the strap paired, opening the app does not start the service while the strap is out of
+range and nothing is waiting to sync. Instead the app looks for the strap itself for up to 20
+seconds while it is open, with no notification, and starts the service if it finds it.
+Otherwise the Status tab says it is waiting for the strap to come into range, and Android
+starts the service when it does. Android reports presence only
+when it changes, so if the service restarts while the strap is away it stops by itself once
+the strap has not been connected for 2 minutes. If the Status tab says presence detection is
+unavailable, the service runs all the time instead.
+
 ## Notifications
 
 | Notification | Meaning |
 |---|---|
 | Tyme4All: Recording since 13:48 · VE 72 L/min | The persistent service notification while a session is open; the VE refreshes every 30 s |
 | Tyme4All: Waiting for a matching Intervals.icu activity | Strap off, a finished session is still waiting for its activity to appear (up to 6 hours); the service stays running for that. Its **Discard, no activity coming** action gives up on those sessions at once, for example after just trying the strap on |
-| Tyme4All: Strap connected / Waiting for strap | The same notification when nothing is recording or pending |
+| Tyme4All: Strap connected / Waiting for strap | The same notification when nothing is recording or pending. It shows the current state from the moment the service starts |
 | Breathing data synced to Intervals.icu | Streams pushed; tap opens the activity |
 | Breathing added to Intervals.icu and Tymewear | Streams pushed and Tymewear's copy replaced in the same pass |
-| Breathing added to Tymewear | A later Tymewear attempt succeeded for a session already on Intervals.icu |
+| Breathing added to Tymewear | A later Tymewear attempt succeeded for a session already on Intervals.icu; the text names the activity |
 | Sign in to Tymewear again | Tymewear stopped accepting the saved sign-in; the app no longer contacts Tymewear until you sign in again in Settings |
 | Intervals.icu sync failed | Push failed; the text names the reason |
 | No Intervals.icu activity found for a breathing session | No overlapping activity after 6 hours (only for sessions of 15 minutes or more); match by hand on the Sessions tab |

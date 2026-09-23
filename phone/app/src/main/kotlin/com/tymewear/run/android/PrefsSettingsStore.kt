@@ -42,6 +42,8 @@ class PrefsSettingsStore(context: Context) : SettingsStore {
             .putThresholds("tw_bike", settings.bikeThresholds)
             .putThresholds("tw_run", settings.runThresholds)
             .putReserve("tw_res", settings.tymewearReserve)
+            .putLong("tw_refresh_ms", settings.tymewearRefreshMs ?: -1L)
+            .putString("tw_refresh_error", settings.tymewearRefreshError ?: "")
             .apply()
         state.value = settings
     }
@@ -110,6 +112,8 @@ class PrefsSettingsStore(context: Context) : SettingsStore {
             runThresholds = readTymewearThresholds("tw_run"),
             tymewearReserve = readTymewearReserve("tw_res"),
             tymewearSignInRefused = prefs.getBoolean("tw_sign_in_refused", d.tymewearSignInRefused),
+            tymewearRefreshMs = prefs.getLong("tw_refresh_ms", -1L).takeIf { it >= 0 },
+            tymewearRefreshError = prefs.getString("tw_refresh_error", "")!!.ifBlank { null },
         )
     }
 }

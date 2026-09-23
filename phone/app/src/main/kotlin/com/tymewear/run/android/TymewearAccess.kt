@@ -4,6 +4,7 @@ import android.content.Context
 import com.tymewear.run.domain.Settings
 import com.tymewear.run.domain.sync.IntervalsClient
 import com.tymewear.run.domain.sync.SyncEngine
+import com.tymewear.run.domain.tymewear.ProfileRefresh
 import com.tymewear.run.domain.tymewear.SignInGuard
 import com.tymewear.run.domain.tymewear.TymewearApi
 import com.tymewear.run.domain.tymewear.TymewearAuthException
@@ -40,30 +41,41 @@ object TymewearAccess {
     }
 
     /**
-     * Reads the thresholds and resting/max values from Tymewear. A failure keeps the stored values;
-     * a refused sign-in sets the refused flag. Call off the main thread.
+     * Reads the thresholds and resting/max values from Tymewear and stores them with the time of
+     * the read, or the time and reason of a failure; a failure keeps the stored values and a
+     * refused sign-in sets the refused flag. Call off the main thread.
      */
-    fun refreshProfile(ctx: Context, api: TymewearApi = TymewearClient(Graph.tymewearCredentials)) {
-        if (!Graph.settings.load().tymewearProfileReadable) return
-        try {
-            val fetched = TymewearProfileSync.apply(Graph.settings.load(), api)
-            val now = Graph.settings.load()
-            if (!now.tymewearProfileReadable) return
-            Graph.settings.save(now.copy(bikeThresholds = fetched.bikeThresholds, runThresholds = fetched.runThresholds, tymewearReserve = fetched.tymewearReserve))
-        } catch (e: TymewearAuthException) {
-            markRefused(ctx)
-        } catch (e: Exception) {
-            Timber.w("Tymewear profile refresh failed: ${e.javaClass.simpleName}")
+    fun refreshProfile(ctx: Context, api: TymewearApi = TymewearClient(Graph.tymewearCredentials)): ProfileRefresh {
+        val result = TymewearProfileSync.refresh(Graph.settings.load(), api)
+        when (result) {
+            is ProfileRefresh.Failed -> Timber.w("Tymewear profile refresh failed: ${result.errorClass}")
+            ProfileRefresh.AuthRefused -> {
+                Timber.w("Tymewear profile refresh failed: TymewearAuthException")
+                markRefused(ctx)
+            }
+            else -> {}
         }
+        if (result != ProfileRefresh.NotSignedIn) recordRefresh(result)
+        return result
     }
 
-    /** Signs in and reads the thresholds; the message for the user. Call off the main thread. */
+    @Synchronized
+    private fun recordRefresh(result: ProfileRefresh) {
+        Graph.settings.save(TymewearProfileSync.record(Graph.settings.load(), result, System.currentTimeMillis()))
+    }
+
+    /**
+     * Signs in, reads the thresholds and, when Tymewear uploads are still waiting (within the give-up
+     * window), starts the service so they run; the message for the user. Call off the main thread.
+     */
     fun signIn(ctx: Context, email: String, password: String): String = try {
         val client = TymewearClient(Graph.tymewearCredentials)
         client.signIn(email, password)
         Graph.settings.save(Graph.settings.load().copy(tymewearSignedIn = true, tymewearSignInRefused = false))
-        refreshProfile(ctx, client)
-        "Signed in to Tymewear"
+        val refreshed = refreshProfile(ctx, client)
+        // A new sign-in (including one that clears a refusal) lets waiting Tymewear uploads run: start the service if any wait.
+        RecorderService.startIfNeeded(ctx)
+        ProfileRefresh.signInMessage(refreshed)
     } catch (_: TymewearAuthException) {
         "Tymewear did not accept that email and password"
     } catch (e: Exception) {
@@ -78,6 +90,7 @@ object TymewearAccess {
             Graph.settings.load().copy(
                 tymewearSignedIn = false, tymewearSignInRefused = false,
                 bikeThresholds = null, runThresholds = null, tymewearReserve = null,
+                tymewearRefreshMs = null, tymewearRefreshError = null,
             ),
         )
     }

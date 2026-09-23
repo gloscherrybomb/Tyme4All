@@ -30,6 +30,11 @@ class NotificationPolicyTest {
         assertEquals("Service off", NotificationPolicy.serviceText(StrapStatus.OFF, null, null, false, false, ZoneOffset.UTC))
     }
 
+    @Test fun `a service start with nothing known says it is waiting for the strap`() {
+        val fresh = LiveState().status(start)
+        assertEquals("Waiting for strap", NotificationPolicy.serviceText(fresh, null, null, false, false, ZoneOffset.UTC))
+    }
+
     @Test fun `a finished session waiting for its activity is reported while the strap is away`() {
         assertEquals("Waiting for a matching Intervals.icu activity", NotificationPolicy.serviceText(StrapStatus.DISCONNECTED, null, null, true, false, ZoneOffset.UTC))
         assertEquals("Waiting for a matching Intervals.icu activity", NotificationPolicy.serviceText(StrapStatus.OFF, null, null, true, false, ZoneOffset.UTC))

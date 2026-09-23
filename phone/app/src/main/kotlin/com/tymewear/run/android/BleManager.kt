@@ -63,7 +63,7 @@ class BleManager(private val context: Context) {
      * is per-application: discovery scans and targeted reconnect scans draw on the same
      * allowance and would otherwise exhaust it between them.
      */
-    private val scanThrottle = ScanThrottle()
+    private val scanThrottle = sharedScanThrottle
 
     /**
      * Scan for VitalPro BLE devices. Emits devices matching the name pattern.
@@ -540,5 +540,10 @@ class BleManager(private val context: Context) {
         data object Subscribed : ConnectionEvent()
         data class Data(val characteristicUuid: UUID, val bytes: ByteArray) : ConnectionEvent()
         data class BatteryLevel(val percent: Int) : ConnectionEvent()
+    }
+
+    private companion object {
+        /** One per process: Android's budget is per app, and the service and the app-open scan each have a BleManager. */
+        val sharedScanThrottle = ScanThrottle()
     }
 }
